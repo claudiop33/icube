@@ -1,0 +1,57 @@
+db.connect_default();
+print("=== Teste de transações ===\n");
+
+db.execute("DELETE FROM equipamentos WHERE codigo_letras LIKE $1", ["ZZTX%"]);
+
+// 1) Transação bem-sucedida
+print("1) Transação com COMMIT:");
+db.begin();
+try {
+    db.execute(
+        "INSERT INTO equipamentos (codigo_letras, codigo_numeros, modelo, data_entrada, defeito, status) VALUES ($1, $2, $3, $4, $5, $6)",
+        ["ZZTX01", "1111", "Test TX 1", today(), "Teste", "avaliacao"]
+    );
+    db.execute(
+        "INSERT INTO equipamentos (codigo_letras, codigo_numeros, modelo, data_entrada, defeito, status) VALUES ($1, $2, $3, $4, $5, $6)",
+        ["ZZTX02", "2222", "Test TX 2", today(), "Teste", "avaliacao"]
+    );
+    db.commit();
+    let n = db.query_one("SELECT COUNT(*) AS n FROM equipamentos WHERE codigo_letras LIKE $1", ["ZZTX%"]);
+    print("   ✓ Commit OK — " + (n["n"] as string) + " registros\n");
+} catch e {
+    db.rollback();
+    print("   ✗ Falha:", e, "\n");
+}
+
+// 2) Transação que falha → ROLLBACK
+print("2) Transação com ROLLBACK:");
+db.begin();
+try {
+    db.execute(
+        "INSERT INTO equipamentos (codigo_letras, codigo_numeros, modelo, data_entrada, defeito, status) VALUES ($1, $2, $3, $4, $5, $6)",
+        ["ZZTX03", "3333", "Test TX 3", today(), "Teste", "avaliacao"]
+    );
+    // força erro: status inválido
+    db.execute(
+        "INSERT INTO equipamentos (codigo_letras, codigo_numeros, modelo, data_entrada, defeito, status) VALUES ($1, $2, $3, $4, $5, $6)",
+        ["ZZTX04", "4444", "Test TX 4", today(), "Teste", "INVALIDO"]
+    );
+    db.commit();
+    print("   ✗ Não deveria chegar aqui\n");
+} catch e {
+    db.rollback();
+    print("   ✓ Rollback executado:", e, "\n");
+}
+
+// 3) Verificação final: só os do commit bem-sucedido ficaram
+print("3) Verificação final:");
+let todos = db.query("SELECT codigo_letras, codigo_numeros FROM equipamentos WHERE codigo_letras LIKE $1 ORDER BY id", ["ZZTX%"]);
+print("   Registros em ZZTX: " + (len(todos) as string));
+for e in todos {
+    print("   - " + (e["codigo_letras"] as string) + "-" + (e["codigo_numeros"] as string));
+}
+print("   (esperado: 2 registros — ZZTX01 e ZZTX02)\n");
+
+// Limpeza
+db.execute("DELETE FROM equipamentos WHERE codigo_letras LIKE $1", ["ZZTX%"]);
+print("Limpeza concluída.");

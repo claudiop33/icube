@@ -1,0 +1,32 @@
+let frutas = ["maçã", "banana", "uva"];
+print("Frutas:", frutas);
+print("Quantidade:", len(frutas));
+
+let vazio: list<int> = [];
+print("Vazio:", len(vazio));
+
+let texto = "olá";
+print("Tamanho de 'olá':", len(texto));
+
+let emoji = "🐣🎉";
+print("Tamanho de '🐣🎉' (chars):", len(emoji));
+
+// Uso prático: iterar pelo índice
+let n = len(frutas);
+let i = 0;
+while i < n {
+    print(i, "->", frutas[i]);
+    i = i + 1;
+}
+
+// Validação com try
+try {
+    let arr = [1, 2, 3];
+    let indice = 5;
+    if indice >= len(arr) {
+        throw "índice " + indice as string + " fora dos limites";
+    }
+    print("OK:", arr[indice]);
+} catch e {
+    print("Tratado:", e);
+}

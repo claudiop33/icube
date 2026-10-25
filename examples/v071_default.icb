@@ -1,0 +1,13 @@
+// Script limpo: sem URL, sem env() manual
+db.connect_default();
+print("Conectado com sucesso");
+
+try {
+    db.execute("CREATE TABLE IF NOT EXISTS icube_v071 (id SERIAL PRIMARY KEY, nome TEXT)");
+    db.execute("TRUNCATE icube_v071 RESTART IDENTITY");
+    db.execute("INSERT INTO icube_v071 (nome) VALUES ($1)", ["Ana"]);
+    db.execute("INSERT INTO icube_v071 (nome) VALUES ($1)", ["Bruno"]);
+    print("Total:", db.query("SELECT COUNT(*) AS n FROM icube_v071")[0]["n"]);
+} catch e {
+    print("Erro:", e);
+}

@@ -1,0 +1,6 @@
+PGPASSWORD='Saturno#2026' psql -h bexdex.postgresql.dbaas.com.br -U bexdex -d bexdex 
+CREATE TABLE IF NOT EXISTS icube_test (
+    id   SERIAL PRIMARY KEY,
+    name TEXT NOT NULL,
+    age  INT
+);

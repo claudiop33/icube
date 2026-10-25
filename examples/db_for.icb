@@ -1,0 +1,23 @@
+db.connect("postgres://bexdex:Saturno%232026@bexdex.postgresql.dbaas.com.br:5432/bexdex?sslmode=require");
+print("Conectado ao bexdex");
+
+db.execute("TRUNCATE icube_test RESTART IDENTITY");
+db.execute("INSERT INTO icube_test (name, age) VALUES ($1, $2)", ["Alice", 30]);
+db.execute("INSERT INTO icube_test (name, age) VALUES ($1, $2)", ["Bob", 25]);
+db.execute("INSERT INTO icube_test (name, age) VALUES ($1, $2)", ["Carol", 40]);
+
+let todos = db.query("SELECT id, name, age FROM icube_test ORDER BY id");
+print("Total de usuários:", todos);
+
+// for sobre lista de Row
+for u in todos {
+    print("Usuário:", u["name"], "tem", u["age"], "anos");
+}
+
+// for aninhado + cálculo
+let soma = 0;
+for u in todos {
+    soma = soma + u["age"];
+}
+print("Idade total:", soma);
+print("Média:", soma / 3);

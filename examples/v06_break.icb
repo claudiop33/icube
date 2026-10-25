@@ -1,0 +1,37 @@
+
+// continue: pula pares
+for n in [1, 2, 3, 4, 5, 6, 7, 8] {
+    if n % 2 == 0 {
+        continue;
+    }
+    print("Ímpar:", n);
+}
+
+// break: para no 5
+let i = 0;
+while true {
+    i = i + 1;
+    if i > 5 {
+        break;
+    }
+    print("i =", i);
+}
+
+// break em for
+for n in [10, 20, 30, 40, 50] {
+    if n == 30 {
+        print("Achei 30, parando");
+        break;
+    }
+    print("n =", n);
+}
+
+// break aninhado (afeta o loop mais interno)
+for i in [1, 2, 3] {
+    for j in [10, 20, 30] {
+        if j == 20 {
+            break;
+        }
+        print(i, "-", j);
+    }
+}

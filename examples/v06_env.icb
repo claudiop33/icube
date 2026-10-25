@@ -1,0 +1,29 @@
+cat > examples/v06_env.icb << 'EOF'
+// Lê do ambiente do processo
+let home = env("HOME");
+if home != null {
+    print("HOME:", home);
+} else {
+    print("HOME não definido");
+}
+
+let path = env("PATH");
+if path != null {
+    print("PATH tem", (path as string), "(primeiros 80 chars)");
+}
+
+// Variável que não existe retorna null
+let inexistente = env("VAR_QUE_NAO_EXISTE_XYZ");
+print("Inexistente:", inexistente);
+
+// Padrão de uso seguro
+let db_url = env("ICUBE_DB_URL");
+if db_url == null {
+    print("ICUBE_DB_URL não configurada");
+    print("Configure com: export ICUBE_DB_URL='postgres://...'");
+} else {
+    print("Conectando...");
+    db.connect(db_url as string);
+    print("Conectado!");
+}
+EOF

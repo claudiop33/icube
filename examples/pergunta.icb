@@ -1,0 +1,12 @@
+
+// Teste 2: pergunta simples ao modelo
+if ai.is_available() {
+    let pergunta = "Em uma frase curta, o que é a linguagem de programação Rust?";
+    print("Pergunta:", pergunta);
+    print("Aguardando resposta do modelo...");
+
+    let resposta = ai.ask(pergunta);
+    print("Resposta:", resposta);
+} else {
+    print("Ollama não disponível");
+}

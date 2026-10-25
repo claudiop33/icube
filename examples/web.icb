@@ -1,0 +1,16 @@
+// Cole este script no playground web (http://localhost:8080)
+
+db.connect("postgres://bexdex:Saturno%232026@bexdex.postgresql.dbaas.com.br:5432/bexdex?sslmode=require");
+print("Conectado ao banco");
+
+let users = db.query("SELECT name, age FROM icube_test ORDER BY id");
+print("Usuários cadastrados:", users);
+
+if ai.is_available() {
+    for u in users {
+        let perfil = ai.ask("Em uma palavra, descreva uma pessoa de " + u["age"] as string + " anos.");
+        print(u["name"], "->", perfil);
+    }
+} else {
+    print("(IA indisponível — pulando análise)");
+}

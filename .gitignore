@@ -1,0 +1,38 @@
+# Rust build
+/target/
+**/*.rs.bk
+
+# Credenciais e configurações locais
+.env
+.env.local
+.env.*.local
+certs/
+*.pem
+*.key
+.icube-reset-token
+icube.toml
+icube.sh
+site/token-git
+
+# Uploads e dados locais
+www/uploads/
+*.db
+*.sqlite
+*.sqlite3
+
+# Binários compilados
+examples/icube
+examples/*.bin
+
+# Logs
+*.log
+/tmp/
+
+# Editor
+.vscode/
+.idea/
+*.swp
+.DS_Store
+
+# HTMLs auxiliares (temporários)
+deepseek_html_*.html

@@ -1,0 +1,17 @@
+// Verifica disponibilidade
+if ai.is_available() {
+    print("Ollama disponível — modelo:", ai.model());
+
+    let resposta = ai.ask("Em uma frase, o que é a linguagem de programação Rust?");
+    print("Resposta:", resposta);
+
+    let classificacao = ai.ask_with_system(
+        "Você é um classificador. Responda apenas com 'positivo', 'negativo' ou 'neutro'.",
+        "Adorei o novo recurso, funcionou perfeitamente!"
+    );
+    print("Classificação:", classificacao);
+} else {
+    print("Ollama não está rodando.");
+    print("Para habilitar: instale https://ollama.com e execute 'ollama serve'");
+    print("Depois baixe o modelo: ollama pull llama3");
+}

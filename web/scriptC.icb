@@ -1,0 +1,30 @@
+db.connect_default();
+
+// ALTERE AQUI: qual página quer ver (1, 2, 3...)
+let pagina = 1;
+let por_pagina = 20;
+
+let total = db.query_one("SELECT COUNT(*) AS n FROM equipamentos");
+let total_num = total["n"] as int;
+let total_paginas = (total_num + por_pagina - 1) / por_pagina;
+
+let offset = (pagina - 1) * por_pagina;
+
+print("📄 Página " + (pagina as string) + " de " + (total_paginas as string) + " (" + (total_num as string) + " total)");
+print("");
+
+let equipamentos = db.query(
+    "SELECT id, codigo_letras, codigo_numeros, modelo, data_entrada, status FROM equipamentos ORDER BY id DESC LIMIT $1 OFFSET $2",
+    [por_pagina, offset]
+);
+
+for e in equipamentos {
+    print("#" + (e["id"] as string) + "  " + (e["codigo_letras"] as string) + "-" + (e["codigo_numeros"] as string) + "  " + (e["modelo"] as string) + "  [" + (e["status"] as string) + "]");
+}
+
+print("");
+if pagina < total_paginas {
+    print("Próxima página: altere 'pagina = " + ((pagina + 1) as string) + "'");
+} else {
+    print("(fim da lista)");
+}

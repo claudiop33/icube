@@ -1,0 +1,26 @@
+
+// Lista todos os equipamentos: codigo_letras + codigo_numeros
+db.connect_default();
+print("Conectado a bexdex");
+print("");
+
+let equipamentos = db.query(
+    "SELECT id, codigo_letras, codigo_numeros, modelo, status FROM equipamentos ORDER BY id"
+);
+
+print("Total de equipamentos:", len(equipamentos));
+print("");
+
+if len(equipamentos) == 0 {
+    print("(tabela vazia - nenhum equipamento cadastrado)");
+} else {
+    print("=== Codigos de equipamentos ===");
+    for e in equipamentos {
+        print(e["id"], "|", e["codigo_letras"], "|", e["codigo_numeros"], "|", e["modelo"], "|", e["status"]);
+    }
+    print("");
+    print("=== Apenas codigo_letras + codigo_numeros ===");
+    for e in equipamentos {
+        print(e["codigo_letras"], "-", e["codigo_numeros"]);
+    }
+}

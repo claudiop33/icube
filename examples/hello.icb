@@ -1,0 +1,30 @@
+// Olá, Icube!
+let nome: string = "Mundo";
+print("Olá,", nome);
+
+let preco: float = 19.99;
+let quantidade: int = 3;
+let total = preco * quantidade as float;
+print("Total:", total);
+
+if total > 50.0 {
+    print("Total alto");
+} else {
+    print("Total baixo");
+}
+
+fn fatorial(n: int) -> int {
+    if n <= 1 {
+        return 1;
+    }
+    return n * fatorial(n - 1);
+}
+print("10! =", fatorial(10));
+
+let soma = 0;
+let i = 0;
+while i < 5 {
+    soma = soma + i;
+    i = i + 1;
+}
+print("Soma 0..4 =", soma);

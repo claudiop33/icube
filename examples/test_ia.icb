@@ -1,0 +1,30 @@
+print("=== Teste de IA ===\n");
+
+if ai.is_available() {
+    print("✓ Ollama disponível");
+    print("  Modelo:", ai.model());
+    print("");
+
+    print("Pergunta: Em uma frase curta, o que é Rust?");
+    print("Aguardando...\n");
+
+    let resposta = ai.ask("Em uma frase curta, o que é Rust?");
+    print("Resposta:", resposta);
+    print("");
+
+    print("Classificando sentimento:");
+    let system = "Responda apenas com UMA palavra: positivo, negativo ou neutro.";
+    let t1 = "Adorei o produto, superou minhas expectativas!";
+    let t2 = "Que decepção, não funcionou.";
+    let t3 = "O produto chegou no prazo.";
+
+    print("  \"" + t1 + "\"");
+    print("  -> " + ai.ask_with_system(system, t1));
+    print("  \"" + t2 + "\"");
+    print("  -> " + ai.ask_with_system(system, t2));
+    print("  \"" + t3 + "\"");
+    print("  -> " + ai.ask_with_system(system, t3));
+} else {
+    print("✗ Ollama NÃO está disponível");
+    print("  Inicie com: ollama serve");
+}

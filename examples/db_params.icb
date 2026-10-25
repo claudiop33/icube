@@ -1,0 +1,28 @@
+db.connect("postgres://bexdex:Saturno%232026@bexdex.postgresql.dbaas.com.br:5432/bexdex?sslmode=require");
+print("Conectado ao bexdex");
+
+db.execute("TRUNCATE icube_test RESTART IDENTITY");
+print("Tabela limpa");
+
+// Insere com parâmetros
+db.execute("INSERT INTO icube_test (name, age) VALUES ($1, $2)", ["Alice", 30]);
+db.execute("INSERT INTO icube_test (name, age) VALUES ($1, $2)", ["Bob", 25]);
+db.execute("INSERT INTO icube_test (name, age) VALUES ($1, $2)", ["Carol", 40]);
+print("3 registros inseridos com parâmetros");
+
+// Busca com parâmetro
+let alice = db.query_one("SELECT id, name, age FROM icube_test WHERE name = $1", ["Alice"]);
+print("Alice:", alice["id"], alice["name"], alice["age"]);
+
+// Prova de segurança: tentativa de injection vira string literal
+let malicioso = "' OR '1'='1";
+let r = db.query("SELECT id, name FROM icube_test WHERE name = $1", [malicioso]);
+print("Resultado da tentativa de injection:", r);
+
+// Insere com todos os tipos
+db.execute(
+    "INSERT INTO icube_test (name, age) VALUES ($1, $2)",
+    ["Dave", 55]
+);
+let dave = db.query_one("SELECT name, age FROM icube_test WHERE name = $1", ["Dave"]);
+print("Dave:", dave["name"], dave["age"]);

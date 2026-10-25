@@ -1,0 +1,88 @@
+
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Equipamentos - Icube</title>
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+
+<header class="app-header">
+    <div class="header-left">
+        <a href="/" class="logo">🐣 Icube</a>
+        <nav class="breadcrumb"><a href="/">Início</a> / <span>Equipamentos</span></nav>
+    </div>
+    <div class="header-right">
+        <span id="user-badge" class="user-badge">...</span>
+        <span id="status-indicator" class="status-badge status-loading">Verificando...</span>
+    </div>
+</header>
+
+<section class="stats-grid" id="stats-grid">
+    <div class="stat-card"><div class="stat-n">...</div><div class="stat-label">Carregando</div></div>
+</section>
+
+<section class="filters-section">
+    <div class="section-header">
+        <h2>🔍 Busca</h2>
+        <button class="btn btn-ghost" onclick="toggleFilters()" id="filters-toggle">Recolher ▲</button>
+    </div>
+    <div id="filters-body">
+        <div class="filters-grid">
+            <div class="field">
+                <label for="f-letras">Código (letras)</label>
+                <input type="text" id="f-letras" maxlength="20" placeholder="Ex: NB">
+            </div>
+            <div class="field">
+                <label for="f-numeros">Código (números)</label>
+                <input type="text" id="f-numeros" maxlength="20" placeholder="Ex: 1234">
+            </div>
+            <div class="field">
+                <label for="f-modelo">Modelo</label>
+                <input type="text" id="f-modelo" maxlength="20" placeholder="Ex: Dell">
+            </div>
+            <div class="field">
+                <label for="f-status">Status</label>
+                <select id="f-status">
+                    <option value="">Todos</option>
+                    <option value="avaliacao">Avaliação</option>
+                    <option value="pecas">Peças</option>
+                    <option value="reparado">Reparado</option>
+                    <option value="liberado">Liberado</option>
+                </select>
+            </div>
+            <div class="field">
+                <label for="f-data-de">Entrada de</label>
+                <input type="date" id="f-data-de">
+            </div>
+            <div class="field">
+                <label for="f-data-ate">Entrada até</label>
+                <input type="date" id="f-data-ate">
+            </div>
+        </div>
+        <div class="filters-actions">
+            <button class="btn btn-primary" onclick="applyFilters()">🔍 Buscar</button>
+            <button class="btn btn-secondary" onclick="clearFilters()">Limpar</button>
+            <span class="spacer"></span>
+            <button class="btn btn-success" onclick="openCreateModal()">➕ Novo Equipamento</button>
+        </div>
+    </div>
+</section>
+
+<section class="table-section">
+    <div class="section-header">
+        <h2>Equipamentos</h2>
+        <span id="results-info" class="info-text"></span>
+    </div>
+    <div id="table-container"><div class="loading-state">Carregando...</div></div>
+    <div class="pagination" id="pagination"></div>
+</section>
+
+<div id="modal-root"></div>
+<div id="notification" class="notification"></div>
+
+<script src="/app.js"></script>
+</body>
+</html>

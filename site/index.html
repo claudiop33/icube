@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Icube — Linguagem de script com banco de dados e IA</title>
+    <meta name="description" content="Icube é uma linguagem de script estaticamente tipada com banco de dados, decimal e IA embutidos. Simples, segura e feita para automatizar negócios.">
+    <style>
+        :root {
+            --primary: #1976d2;
+            --primary-dark: #1565c0;
+            --bg: #0d1117;
+            --bg-card: #161b22;
+            --text: #c9d1d9;
+            --text-muted: #8b949e;
+            --border: #30363d;
+            --success: #2ea043;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+        }
+        a { color: var(--primary); text-decoration: none; }
+        a:hover { text-decoration: underline; }
+
+        .container { max-width: 1100px; margin: 0 auto; padding: 0 20px; }
+
+        /* Hero */
+        .hero {
+            text-align: center;
+            padding: 100px 20px 60px;
+            background: radial-gradient(circle at 50% 0%, rgba(25, 118, 210, 0.15) 0%, transparent 60%);
+        }
+        .hero h1 {
+            font-size: clamp(2.5rem, 6vw, 4rem);
+            color: #fff;
+            margin-bottom: 16px;
+            letter-spacing: -1px;
+        }
+        .hero h1 span { color: var(--primary); }
+        .hero .tagline {
+            font-size: clamp(1.1rem, 2.5vw, 1.4rem);
+            color: var(--text-muted);
+            max-width: 700px;
+            margin: 0 auto 32px;
+        }
+        .badges { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; margin-bottom: 32px; }
+        .badge {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+        .badge strong { color: var(--success); }
+        .cta-buttons { display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; }
+        .btn {
+            display: inline-block;
+            padding: 14px 28px;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 1rem;
+            transition: transform 0.15s, background 0.15s;
+        }
+        .btn:hover { transform: translateY(-2px); text-decoration: none; }
+        .btn-primary { background: var(--primary); color: #fff; }
+        .btn-primary:hover { background: var(--primary-dark); }
+        .btn-secondary { background: var(--bg-card); color: var(--text); border: 1px solid var(--border); }
+        .btn-secondary:hover { background: #21262d; }
+
+        /* Code block */
+        .code-demo {
+            max-width: 800px;
+            margin: 40px auto 0;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            overflow: hidden;
+            text-align: left;
+        }
+        .code-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 12px 16px;
+            background: #0d1117;
+            border-bottom: 1px solid var(--border);
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+        .dot { width: 12px; height: 12px; border-radius: 50%; }
+        .dot.red { background: #ff5f56; }
+        .dot.yellow { background: #ffbd2e; }
+        .dot.green { background: #27c93f; }
+        pre {
+            padding: 20px;
+            overflow-x: auto;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 0.9rem;
+            line-height: 1.5;
+        }
+        .kw { color: #ff7b72; }
+        .str { color: #a5d6ff; }
+        .fn { color: #d2a8ff; }
+        .num { color: #79c0ff; }
+        .cm { color: #8b949e; font-style: italic; }
+
+        /* Features */
+        .features { padding: 80px 20px; }
+        .features h2 { text-align: center; font-size: 2rem; color: #fff; margin-bottom: 48px; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 24px; }
+        .card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 28px;
+            transition: border-color 0.2s;
+        }
+        .card:hover { border-color: var(--primary); }
+        .card .icon { font-size: 2rem; margin-bottom: 12px; }
+        .card h3 { color: #fff; font-size: 1.15rem; margin-bottom: 8px; }
+        .card p { color: var(--text-muted); font-size: 0.95rem; }
+
+        /* Install */
+        .install { padding: 60px 20px; text-align: center; background: var(--bg-card); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+        .install h2 { font-size: 2rem; color: #fff; margin-bottom: 16px; }
+        .install p { color: var(--text-muted); margin-bottom: 24px; }
+        .install-code {
+            display: inline-block;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 16px 32px;
+            font-family: 'Consolas', monospace;
+            font-size: 1rem;
+            color: var(--success);
+        }
+
+        /* Footer */
+        footer {
+            padding: 40px 20px;
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            border-top: 1px solid var(--border);
+        }
+        footer a { color: var(--text-muted); }
+        footer a:hover { color: var(--primary); }
+    </style>
+</head>
+<body>
+
+    <!-- HERO -->
+    <section class="hero">
+        <div class="container">
+            <h1>🐣 <span>Icube</span></h1>
+            <p class="tagline">
+                Linguagem de script estaticamente tipada com <strong>banco de dados</strong>, 
+                <strong>decimal</strong> e <strong>IA</strong> embutidos.
+                Simples, segura e feita para automatizar negócios.
+            </p>
+            <div class="badges">
+                <span class="badge">v0.7.7</span>
+                <span class="badge"><strong>✓</strong> PostgreSQL + MySQL</span>
+                <span class="badge"><strong>✓</strong> Decimal nativo</span>
+                <span class="badge"><strong>✓</strong> IA local (Ollama)</span>
+            </div>
+            <div class="cta-buttons">
+                <a href="#instalacao" class="btn btn-primary">Começar agora</a>
+                <a href="https://github.com/SEU_USUARIO/icube" class="btn btn-secondary" target="_blank" rel="noopener">Ver no GitHub →</a>
+            </div>
+
+            <!-- Demo de código -->
+            <div class="code-demo">
+                <div class="code-header">
+                    <span class="dot red"></span>
+                    <span class="dot yellow"></span>
+                    <span class="dot green"></span>
+                    <span style="margin-left: 12px;">exemplo.icb</span>
+                </div>
+                <pre><code><span class="cm">// Conecta ao banco e consulta cotações</span>
+<span class="fn">db.connect_default</span>();
+
+<span class="kw">let</span> cotacoes = <span class="fn">db.query</span>(
+    <span class="str">"SELECT peca_nome, preco FROM cotacoes WHERE status = $1"</span>,
+    [<span class="str">"pendente"</span>]
+);
+
+<span class="kw">for</span> c <span class="kw">in</span> cotacoes {
+    <span class="cm">// IA analisa o preço</span>
+    <span class="kw">let</span> analise = <span class="fn">ai.ask</span>(
+        <span class="str">"O preço R$ "</span> + (c[<span class="str">"preco"</span>] <span class="kw">as</span> string) + <span class="str">" está justo?"</span>
+    );
+    <span class="fn">print</span>(c[<span class="str">"peca_nome"</span>], <span class="str">"-&gt;"</span>, analise);
+}</code></pre>
+            </div>
+        </div>
+    </section>
+
+    <!-- FEATURES -->
+    <section class="features">
+        <div class="container">
+            <h2>Por que Icube?</h2>
+            <div class="grid">
+                <div class="card">
+                    <div class="icon">🗄️</div>
+                    <h3>Banco de dados nativo</h3>
+                    <p>Consultas SQL com parâmetros seguros (<code>$1</code>, <code>$2</code>) e transações atômicas. Sem ORM, sem surpresas.</p>
+                </div>
+                <div class="card">
+                    <div class="icon">💰</div>
+                    <h3>Decimal de verdade</h3>
+                    <p>Tipo <code>decimal</code> com 28 dígitos de precisão. Perfeito para dinheiro, contabilidade e cotações.</p>
+                </div>
+                <div class="card">
+                    <div class="icon">🤖</div>
+                    <h3>IA integrada</h3>
+                    <p>Chame <code>ai.ask()</code> direto no script. Integração nativa com Ollama e modelos locais.</p>
+                </div>
+                <div class="card">
+                    <div class="icon">🛡️</div>
+                    <h3>Tipagem estática</h3>
+                    <p>Erros detectados antes da execução. Nulidade explícita (<code>T?</code>) e casts seguros.</p>
+                </div>
+                <div class="card">
+                    <div class="icon">⚡</div>
+                    <h3>Servidor web embutido</h3>
+                    <p>HTTP/HTTPS, autenticação Argon2id, sessões e rate limiting no mesmo binário.</p>
+                </div>
+                <div class="card">
+                    <div class="icon">📦</div>
+                    <h3>Zero configuração</h3>
+                    <p>Um único binário. <code>icube script.icb</code> e pronto. REPL interativo incluso.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- INSTALAÇÃO -->
+    <section class="install" id="instalacao">
+        <div class="container">
+            <h2>Instalação rápida</h2>
+            <p>Compile a partir do código-fonte (Rust 1.75+)</p>
+            <div class="install-code">$ cargo build --release</div>
+            <p style="margin-top: 24px;">
+                <a href="https://github.com/SEU_USUARIO/icube#readme" target="_blank" rel="noopener">Ver documentação completa →</a>
+            </p>
+        </div>
+    </section>
+
+    <!-- FOOTER -->
+    <footer>
+        <div class="container">
+            <p>
+                Icube v0.7.7 · Feito com 🦀 Rust ·
+                <a href="https://github.com/SEU_USUARIO/icube" target="_blank" rel="noopener">GitHub</a> ·
+                <a href="https://github.com/SEU_USUARIO/icube/blob/main/DOCS.md" target="_blank" rel="noopener">Documentação</a>
+            </p>
+        </div>
+    </footer>
+
+</body>
+</html>

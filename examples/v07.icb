@@ -1,0 +1,43 @@
+db.connect_default();
+print("=== Teste de datas em equipamentos ===\n");
+
+db.execute("DELETE FROM equipamentos WHERE codigo_letras LIKE $1", ["ZZTEST%"]);
+
+print("1) INSERT com cast nativo:");
+db.execute(
+    "INSERT INTO equipamentos (codigo_letras, codigo_numeros, modelo, data_entrada, data_saida, defeito, status) VALUES ($1, $2, $3, $4, $5, $6, $7)",
+    ["ZZTEST1", "0001", "Notebook Dell", "2026-01-15" as date, "2026-02-20" as date, "Nao liga", "liberado"]
+);
+print("   OK\n");
+
+print("2) INSERT com today():");
+db.execute(
+    "INSERT INTO equipamentos (codigo_letras, codigo_numeros, modelo, data_entrada, defeito, status) VALUES ($1, $2, $3, $4, $5, $6)",
+    ["ZZTEST2", "0002", "Monitor LG", today(), "Tela quebrada", "avaliacao"]
+);
+print("   OK\n");
+
+print("3) SELECT mostrando datas:");
+let eq = db.query(
+    "SELECT id, codigo_letras, data_entrada, data_saida, criado_em FROM equipamentos WHERE codigo_letras LIKE $1 ORDER BY id",
+    ["ZZTEST%"]
+);
+for e in eq {
+    print("   ID:", e["id"], "| codigo:", e["codigo_letras"]);
+    print("     entrada:", e["data_entrada"]);
+    print("     saida:", e["data_saida"]);
+    print("     criado_em:", e["criado_em"]);
+    print("");
+}
+
+print("4) Filtro por data:");
+let recentes = db.query(
+    "SELECT codigo_letras, data_entrada FROM equipamentos WHERE data_entrada >= $1 AND codigo_letras LIKE $2",
+    ["2026-02-01" as date, "ZZTEST%"]
+);
+for e in recentes {
+    print("   ", e["codigo_letras"], "->", e["data_entrada"]);
+}
+
+db.execute("DELETE FROM equipamentos WHERE codigo_letras LIKE $1", ["ZZTEST%"]);
+print("\nTeste concluido, registros ZZTEST removidos.");

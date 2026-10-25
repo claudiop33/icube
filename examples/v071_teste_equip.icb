@@ -1,0 +1,77 @@
+
+// Teste completo: INSERT, SELECT, filtro, DELETE
+// Os registros de teste usam prefixo "ZZTEST" e sao removidos no fim.
+
+db.connect_default();
+print("=== Teste da tabela equipamentos ===\n");
+
+// 1) Estado inicial
+let antes = db.query_one("SELECT COUNT(*) AS n FROM equipamentos");
+print("Total ANTES:", antes["n"]);
+
+// 2) Inserir 3 registros de teste
+print("\nInserindo 3 equipamentos de teste...");
+try {
+    db.execute(
+        "INSERT INTO equipamentos (codigo_letras, codigo_numeros, modelo, data_entrada, defeito, status) VALUES ($1, $2, $3, $4::date, $5, $6)",
+        ["ZZTEST1", "0001", "Notebook Dell", "2026-01-15", "Nao liga", "avaliacao"]
+    );
+    db.execute(
+        "INSERT INTO equipamentos (codigo_letras, codigo_numeros, modelo, data_entrada, defeito, status) VALUES ($1, $2, $3, $4::date, $5, $6)",
+        ["ZZTEST2", "0002", "Monitor LG", "2026-01-16", "Tela quebrada", "pecas"]
+    );
+    db.execute(
+        "INSERT INTO equipamentos (codigo_letras, codigo_numeros, modelo, data_entrada, defeito, status) VALUES ($1, $2, $3, $4::date, $5, $6)",
+        ["ZZTEST3", "0003", "Teclado Logitech", "2026-01-17", "Teclas travando", "reparado"]
+    );
+    print("3 insercoes OK");
+} catch e {
+    print("Erro ao inserir:", e);
+}
+
+// 3) Verificar contagem
+let depois = db.query_one("SELECT COUNT(*) AS n FROM equipamentos");
+print("Total DEPOIS:", depois["n"]);
+
+// 4) Listar só os de teste
+print("\n=== Registros de teste inseridos ===");
+let testes = db.query(
+    "SELECT id, codigo_letras, codigo_numeros, modelo, status FROM equipamentos WHERE codigo_letras LIKE $1 ORDER BY id",
+    ["ZZTEST%"]
+);
+for e in testes {
+    print("  ", e["id"], "|", e["codigo_letras"], "|", e["codigo_numeros"], "|", e["modelo"], "|", e["status"]);
+}
+
+// 5) Filtro por status (deve trazer só 1 de teste: o "pecas")
+print("\n=== Filtro: status = 'pecas' (só dos testes) ===");
+let pecas = db.query(
+    "SELECT codigo_letras, codigo_numeros, status FROM equipamentos WHERE status = $1 AND codigo_letras LIKE $2",
+    ["pecas", "ZZTEST%"]
+);
+for e in pecas {
+    print("  ", e["codigo_letras"], "-", e["codigo_numeros"], "(", e["status"], ")");
+}
+
+// 6) Atualizar o status do primeiro
+print("\n=== UPDATE: mudar status do ZZTEST1 para 'reparado' ===");
+let n = db.execute(
+    "UPDATE equipamentos SET status = $1 WHERE codigo_letras = $2",
+    ["reparado", "ZZTEST1"]
+);
+print("  Registros atualizados:", n);
+
+let verif = db.query_one(
+    "SELECT status FROM equipamentos WHERE codigo_letras = $1",
+    ["ZZTEST1"]
+);
+print("  Novo status:", verif["status"]);
+
+// 7) Deletar os registros de teste
+print("\n=== Limpando registros de teste ===");
+let removidos = db.execute("DELETE FROM equipamentos WHERE codigo_letras LIKE $1", ["ZZTEST%"]);
+print("  Removidos:", removidos);
+
+let final_count = db.query_one("SELECT COUNT(*) AS n FROM equipamentos");
+print("Total FINAL:", final_count["n"]);
+print("\nTeste concluido com sucesso.");

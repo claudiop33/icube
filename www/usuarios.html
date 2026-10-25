@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Usuários - Icube</title>
+<link rel="stylesheet" href="/style.css">
+<style>
+    .user-table td .role-badge {
+        padding: 3px 10px;
+        border-radius: 4px;
+        font-size: 11px;
+        font-weight: 700;
+        text-transform: uppercase;
+    }
+    .role-administrator { background: #ffcdd2; color: #b71c1c; }
+    .role-colaborador { background: #bbdefb; color: #0d47a1; }
+    .role-visitante { background: #e0e0e0; color: #424242; }
+</style>
+</head>
+<body>
+
+<header class="app-header">
+    <div class="header-left">
+        <a href="/" class="logo">🐣 Icube</a>
+        <nav class="breadcrumb"><a href="/">Início</a> / <span>Usuários</span></nav>
+    </div>
+    <div class="header-right">
+        <span id="status-indicator" class="status-badge status-loading">Verificando...</span>
+    </div>
+</header>
+
+<section class="filters-section">
+    <div class="section-header">
+        <h2>👥 Usuários do sistema</h2>
+        <button class="btn btn-success" onclick="abrirNovoUsuario()">➕ Novo usuário</button>
+    </div>
+    <div id="table-container">
+        <div class="loading-state">Carregando...</div>
+    </div>
+</section>
+
+<div id="modal-root"></div>
+<div id="notification" class="notification"></div>
+
+<script>
+const ROLES = {
+    'administrator': 'Administrador',
+    'colaborador': 'Colaborador',
+    'visitante': 'Visitante',
+};
+const VALID_ROLES = Object.keys(ROLES);
+
+let currentUser = null;
+let users = [];
+
+function escHtml(s) {
+    return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+        .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
+function notify(msg, type = 'info', timeout = 3500) {
+    const el = document.getElementById('notification');
+    el.textContent = msg;
+    el.className = `notification ${type} show`;
+    clearTimeout(el._t);
+    el._t = setTimeout(() => el.classList.remove('show'), timeout);
+}
+
+function openModal(html) {
+    document.getElementById('modal-root').innerHTML = html;
+    document.body.style.overflow = 'hidden';
+}
+function closeModal() {
+    document.getElementById('modal-root').innerHTML = '';
+    document.body.style.overflow = '';
+}
+
+async function carregarUsuarioLogado() {
+    try {
+        const r = await fetch('/api/me');
+        const d = await r.json();
+        if (!d.authenticated) {
+            location.href = '/login.html?redirect=/usuarios.html';
+            return null;
+        }
+        if (d.user.role !== 'administrator') {
+            document.body.innerHTML = '<div style="max-width:500px;margin:80px auto;padding:40px;text-align:center;">' +
+                '<h1>🚫 Acesso negado</h1><p>Esta página é restrita a administradores.</p>' +
+                '<p><a href="/">← Voltar ao início</a></p></div>';
+            return null;
+        }
+        document.getElementById('status-indicator').textContent = '● ' + d.user.username;
+        document.getElementById('status-indicator').className = 'status-badge status-online';
+        return d.user;
+    } catch (e) {
+        notify('Erro ao verificar login', 'error');
+        return null;
+    }
+}
+
+async function carregarUsuarios() {
+    const container = document.getElementById('table-container');
+    container.innerHTML = '<div class="loading-state">Carregando...</div>';
+
+    try {
+        const r = await fetch('/api/users');
+        const d = await r.json();
+        if (!d.ok) throw new Error(d.error || 'erro');
+
+        users = d.users;
+        renderTabela();
+    } catch (e) {
+        container.innerHTML = `<div class="error-state"><strong>Erro:</strong><pre>${escHtml(e.message)}</pre></div>`;
+    }
+}
+
+function renderTabela() {
+    const container = document.getElementById('table-container');
+    if (!users.length) {
+        container.innerHTML = '<div class="empty-state">Nenhum usuário</div>';
+        return;
+    }
+
+    let html = `<div class="table-wrapper"><table class="user-table">
+        <thead><tr>
+            <th>ID</th><th>Usuário</th><th>Papel</th><th>Criado em</th><th>Ações</th>
+        </tr></thead><tbody>`;
+
+    for (const u of users) {
+        const isSelf = currentUser && u.id === currentUser.id;
+        const dataCriacao = new Date(u.created_at).toLocaleString('pt-BR');
+
+        html += `<tr>
+            <td>#${u.id}</td>
+            <td><strong>${escHtml(u.username)}</strong>${isSelf ? ' <small style="color:var(--text-muted)">(você)</small>' : ''}</td>
+            <td><span class="role-badge role-${escHtml(u.role)}">${escHtml(ROLES[u.role] || u.role)}</span></td>
+            <td>${escHtml(dataCriacao)}</td>
+            <td class="actions-cell">
+                <button class="action-btn" title="Alterar senha" onclick="abrirAlterarSenha(${u.id})">🔑</button>
+                ${!isSelf ? `<button class="action-btn" title="Alterar papel" onclick="abrirAlterarPapel(${u.id})">👤</button>` : ''}
+                ${!isSelf ? `<button class="action-btn" title="Remover" onclick="confirmarRemover(${u.id})">🗑️</button>` : ''}
+            </td>
+        </tr>`;
+    }
+
+    html += '</tbody></table></div>';
+    container.innerHTML = html;
+}
+
+function abrirNovoUsuario() {
+    const roleOpts = VALID_ROLES.map(r =>
+        `<option value="${r}" ${r === 'colaborador' ? 'selected' : ''}>${ROLES[r]}</option>`
+    ).join('');
+
+    openModal(`
+        <div class="modal-overlay" onclick="if(event.target===this)closeModal()">
+            <div class="modal">
+                <div class="modal-header">
+                    <h2>➕ Novo usuário</h2>
+                    <button class="modal-close" onclick="closeModal()">×</button>
+                </div>
+                <div class="modal-body">
+                    <form autocomplete="off" onsubmit="criarUsuario(event)">
+                        <input type="text" name="fakeusernameremembered" style="display:none" tabindex="-1">
+                        <input type="password" name="fakepasswordremembered" style="display:none" tabindex="-1">
+                        <div class="filters-grid">
+                            <div class="field full-width">
+                                <label>Nome de usuário *</label>
+                                <input type="text" id="f-username" autocomplete="off" maxlength="50" required>
+                            </div>
+                            <div class="field full-width">
+                                <label>Senha * (mín 6 caracteres)</label>
+                                <input type="password" id="f-password" autocomplete="new-password" required>
+                            </div>
+                            <div class="field full-width">
+                                <label>Papel *</label>
+                                <select id="f-role">${roleOpts}</select>
+                            </div>
+                        </div>
+                        <div class="form-actions">
+                            <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
+                            <button type="submit" class="btn btn-success">💾 Criar</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    `);
+}
+
+async function criarUsuario(e) {
+    e.preventDefault();
+    const username = document.getElementById('f-username').value.trim();
+    const password = document.getElementById('f-password').value;
+    const role = document.getElementById('f-role').value;
+
+    if (!username || !password) { notify('Preencha todos os campos', 'error'); return; }
+    if (password.length < 6) { notify('Senha deve ter pelo menos 6 caracteres', 'error'); return; }
+
+    try {
+        const r = await fetch('/api/users/create', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username, password, role }),
+        });
+        const d = await r.json();
+        if (!d.ok) throw new Error(d.error);
+        closeModal();
+        notify(`Usuário "${username}" criado`, 'success');
+        await carregarUsuarios();
+    } catch (e) {
+        notify('Erro: ' + e.message, 'error', 5000);
+    }
+}
+
+function abrirAlterarSenha(id) {
+    const u = users.find(x => x.id === id);
+    openModal(`
+        <div class="modal-overlay" onclick="if(event.target===this)closeModal()">
+            <div class="modal modal-sm">
+                <div class="modal-header">
+                    <h2>🔑 Alterar senha</h2>
+                    <button class="modal-close" onclick="closeModal()">×</button>
+                </div>
+                <div class="modal-body">
+                    <p>Usuário: <strong>${escHtml(u.username)}</strong></p>
+                    <form autocomplete="off" onsubmit="alterarSenha(event, ${id})">
+                        <input type="password" name="fakepasswordremembered" style="display:none" tabindex="-1">
+                        <div class="field">
+                            <label>Nova senha * (mín 6)</label>
+                            <input type="password" id="f-new-pass" autocomplete="new-password" required>
+                        </div>
+                        <div class="form-actions">
+                            <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
+                            <button type="submit" class="btn btn-primary">💾 Salvar</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    `);
+}
+
+async function alterarSenha(e, id) {
+    e.preventDefault();
+    const password = document.getElementById('f-new-pass').value;
+    if (password.length < 6) { notify('Senha deve ter pelo menos 6 caracteres', 'error'); return; }
+
+    try {
+        const r = await fetch(`/api/users/${id}/password`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ password }),
+        });
+        const d = await r.json();
+        if (!d.ok) throw new Error(d.error);
+        closeModal();
+        notify('Senha alterada', 'success');
+    } catch (e) {
+        notify('Erro: ' + e.message, 'error', 5000);
+    }
+}
+
+function abrirAlterarPapel(id) {
+    const u = users.find(x => x.id === id);
+    const opts = VALID_ROLES.map(r =>
+        `<option value="${r}" ${r === u.role ? 'selected' : ''}>${ROLES[r]}</option>`
+    ).join('');
+
+    openModal(`
+        <div class="modal-overlay" onclick="if(event.target===this)closeModal()">
+            <div class="modal modal-sm">
+                <div class="modal-header">
+                    <h2>👤 Alterar papel</h2>
+                    <button class="modal-close" onclick="closeModal()">×</button>
+                </div>
+                <div class="modal-body">
+                    <p>Usuário: <strong>${escHtml(u.username)}</strong></p>
+                    <form onsubmit="alterarPapel(event, ${id})">
+                        <div class="field">
+                            <label>Novo papel</label>
+                            <select id="f-new-role">${opts}</select>
+                        </div>
+                        <div class="form-actions">
+                            <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
+                            <button type="submit" class="btn btn-primary">💾 Salvar</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    `);
+}
+
+async function alterarPapel(e, id) {
+    e.preventDefault();
+    const role = document.getElementById('f-new-role').value;
+    try {
+        const r = await fetch(`/api/users/${id}/role`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ role }),
+        });
+        const d = await r.json();
+        if (!d.ok) throw new Error(d.error);
+        closeModal();
+        notify('Papel alterado', 'success');
+        await carregarUsuarios();
+    } catch (e) {
+        notify('Erro: ' + e.message, 'error', 5000);
+    }
+}
+
+function confirmarRemover(id) {
+    const u = users.find(x => x.id === id);
+    openModal(`
+        <div class="modal-overlay" onclick="if(event.target===this)closeModal()">
+            <div class="modal modal-sm">
+                <div class="modal-header">
+                    <h2>🗑️ Remover usuário</h2>
+                    <button class="modal-close" onclick="closeModal()">×</button>
+                </div>
+                <div class="modal-body">
+                    <p>Remover <strong>${escHtml(u.username)}</strong>?</p>
+                    <p style="color:var(--danger);margin-top:8px;font-size:14px;">Esta ação não pode ser desfeita.</p>
+                    <div class="form-actions">
+                        <button class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
+                        <button class="btn btn-danger" onclick="removerUsuario(${id})">Sim, remover</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `);
+}
+
+async function removerUsuario(id) {
+    try {
+        const r = await fetch(`/api/users/${id}/delete`, { method: 'POST' });
+        const d = await r.json();
+        if (!d.ok) throw new Error(d.error);
+        closeModal();
+        notify('Usuário removido', 'success');
+        await carregarUsuarios();
+    } catch (e) {
+        notify('Erro: ' + e.message, 'error', 5000);
+    }
+}
+
+async function init() {
+    currentUser = await carregarUsuarioLogado();
+    if (currentUser) await carregarUsuarios();
+}
+
+document.addEventListener('DOMContentLoaded', init);
+</script>
+</body>
+</html>

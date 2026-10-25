@@ -1,0 +1,37 @@
+// Conectar ao PostgreSQL bexdex (DBaaS com SSL)
+db.connect("postgres://bexdex:Saturno%232026@bexdex.postgresql.dbaas.com.br:5432/bexdex?sslmode=require");
+print("Conectado ao PostgreSQL bexdex");
+
+// Limpar a tabela de teste
+db.execute("TRUNCATE icube_test RESTART IDENTITY");
+print("Tabela icube_test limpa");
+
+// Inserir 3 registros
+let n1 = db.execute("INSERT INTO icube_test (name, age) VALUES ('Alice', 30)");
+let n2 = db.execute("INSERT INTO icube_test (name, age) VALUES ('Bob', 25)");
+let n3 = db.execute("INSERT INTO icube_test (name, age) VALUES ('Carol', 40)");
+print("Inseridos:", n1 + n2 + n3, "registros");
+
+// Buscar um registro
+let alice = db.query_one("SELECT id, name, age FROM icube_test WHERE name = 'Alice'");
+print("Alice:");
+print("  id  :", alice["id"]);
+print("  nome:", alice["name"]);
+print("  idade:", alice["age"]);
+
+// Buscar todos os registros
+let todos = db.query("SELECT id, name FROM icube_test ORDER BY id");
+print("Todos os usuários:");
+print(todos);
+
+// Atualizar
+let atualizados = db.execute("UPDATE icube_test SET age = 31 WHERE name = 'Alice'");
+print("Registros atualizados:", atualizados);
+
+// Verificar atualização
+let alice2 = db.query_one("SELECT age FROM icube_test WHERE name = 'Alice'");
+print("Nova idade da Alice:", alice2["age"]);
+
+// Deletar
+let deletados = db.execute("DELETE FROM icube_test WHERE name = 'Bob'");
+print("Registros deletados:", deletados);

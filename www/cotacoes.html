@@ -1,0 +1,74 @@
+
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cotações - Icube</title>
+<link rel="stylesheet" href="/style.css">
+<style>
+    .checkbox-cell { text-align: center; width: 40px; }
+    .checkbox-cell input[type=checkbox] {
+        width: 18px; height: 18px; cursor: pointer; accent-color: var(--primary);
+    }
+    #btn-export-eml.ready { background: var(--success); color: white; }
+    #btn-export-eml.ready:hover { background: var(--success-dark); }
+</style>
+</head>
+<body>
+
+<header class="app-header">
+    <div class="header-left">
+        <a href="/" class="logo">🐣 Icube</a>
+        <nav class="breadcrumb"><a href="/">Início</a> / <span>Cotações</span></nav>
+    </div>
+    <div class="header-right">
+        <span id="user-badge" class="user-badge">...</span>
+    </div>
+</header>
+
+<section class="stats-grid" id="stats-grid">
+    <div class="stat-card"><div class="stat-n">...</div><div class="stat-label">Carregando</div></div>
+</section>
+
+<section class="filters-section">
+    <div class="section-header"><h2>🔍 Busca</h2></div>
+    <div class="filters-grid">
+        <div class="field"><label for="f-peca">Peça</label><input type="text" id="f-peca" placeholder="Ex: HD"></div>
+        <div class="field"><label for="f-fornecedor">Fornecedor</label><input type="text" id="f-fornecedor" placeholder="Ex: Kabum"></div>
+        <div class="field"><label for="f-categoria">Categoria</label><input type="text" id="f-categoria" placeholder="Ex: Armazenamento"></div>
+        <div class="field"><label for="f-status">Status</label>
+            <select id="f-status">
+                <option value="">Todos</option>
+                <option value="pendente">Pendente</option>
+                <option value="extraido">Extraído</option>
+                <option value="falhou">Falhou</option>
+                <option value="manual">Manual</option>
+            </select>
+        </div>
+    </div>
+    <div class="filters-actions">
+        <button class="btn btn-primary" onclick="applyFilters()">🔍 Buscar</button>
+        <button class="btn btn-secondary" onclick="clearFilters()">Limpar</button>
+        <span class="spacer"></span>
+        <button class="btn btn-secondary" onclick="exportSelectedEml()" id="btn-export-eml" disabled>
+            📧 Exportar selecionados (0)
+        </button>
+        <button class="btn btn-success" onclick="openCreateModal()">➕ Nova Cotação</button>
+    </div>
+</section>
+
+<section class="table-section">
+    <div class="section-header"><h2>Cotações</h2><span id="results-info" class="info-text"></span></div>
+    <div id="table-container"><div class="loading-state">Carregando...</div></div>
+    <div class="pagination" id="pagination"></div>
+</section>
+
+<div id="modal-root"></div>
+<div id="notification" class="notification"></div>
+
+<script src="/cotacoes.js"></script>
+</body>
+</html>
+
+

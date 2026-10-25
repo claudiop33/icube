@@ -1,0 +1,24 @@
+db.connect_default();
+
+// Sumário geral
+let total = db.query_one("SELECT COUNT(*) AS n FROM equipamentos");
+print("📦 Total de equipamentos: " + (total["n"] as string));
+print("");
+
+// Contagem por status
+print("📊 Por status:");
+let status_list = ["avaliacao", "pecas", "reparado", "liberado"];
+for s in status_list {
+    let n = db.query_one("SELECT COUNT(*) AS n FROM equipamentos WHERE status = $1", [s]);
+    print("   " + s + ": " + (n["n"] as string));
+}
+print("");
+
+// Últimos 10
+print("🕐 Últimos 10 cadastrados:");
+let recentes = db.query(
+    "SELECT codigo_letras, codigo_numeros, modelo, data_entrada, status FROM equipamentos ORDER BY criado_em DESC LIMIT 10"
+);
+for e in recentes {
+    print("   " + (e["codigo_letras"] as string) + "-" + (e["codigo_numeros"] as string) + "  " + (e["modelo"] as string) + "  [" + (e["data_entrada"] as string) + " | " + (e["status"] as string) + "]");
+}

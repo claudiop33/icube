@@ -1,0 +1,9 @@
+
+// Teste 1: o Ollama está respondendo?
+if ai.is_available() {
+    print("✓ Ollama está disponível");
+    print("  Modelo em uso:", ai.model());
+} else {
+    print("✗ Ollama NÃO está disponível");
+    print("  Inicie com: ollama serve");
+}

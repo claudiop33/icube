@@ -1,0 +1,38 @@
+print("1) Sucesso:");
+try {
+    print("   try");
+} catch e {
+    print("   catch (não executa)");
+} finally {
+    print("   finally (sempre)");
+}
+
+print("\n2) Erro capturado:");
+try {
+    throw "falha";
+} catch e {
+    print("   catch:", e);
+} finally {
+    print("   finally (sempre)");
+}
+
+print("\n3) Erro não capturado — finally executa antes do abort:");
+try {
+    let _ = 1 / 0;
+} catch e {
+    print("   catch:", e);
+} finally {
+    print("   finally (antes do throw)");
+}
+
+print("\n4) Return dentro de try — finally roda antes:");
+fn teste() -> int {
+    try {
+        return 10;
+    } finally {
+        print("   finally no return");
+    }
+}
+print("   retorno:", teste());
+
+

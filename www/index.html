@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Icube</title>
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+
+<!-- VIEW: LOGIN -->
+<div id="view-login" class="login-container hidden">
+    <h1>🔐 Entrar</h1>
+    <form id="login-form" autocomplete="off" onsubmit="return false;">
+        <input type="text" name="fakeusernameremembered" style="display:none" tabindex="-1">
+        <input type="password" name="fakepasswordremembered" style="display:none" tabindex="-1">
+        <div class="field">
+            <label for="username">Usuário</label>
+            <input type="text" id="username" maxlength="50" autocomplete="off" required
+                   readonly onfocus="this.removeAttribute('readonly')">
+        </div>
+        <div class="field">
+            <label for="password">Senha</label>
+            <input type="password" id="password" autocomplete="new-password" required
+                   readonly onfocus="this.removeAttribute('readonly')">
+        </div>
+        <button type="submit" id="btn-entrar">Entrar</button>
+        <div id="login-msg" class="login-msg"></div>
+    </form>
+</div>
+
+<!-- VIEW: MENU -->
+<div id="view-menu" class="menu-container hidden">
+    <div class="menu-header">
+        <h1>🐣 Icube</h1>
+        <p class="subtitle">Sistema de Gestão</p>
+        <div id="user-info" class="user-info"><span>Carregando...</span></div>
+    </div>
+    <div class="menu-grid">
+        <a href="/equipamentos.html" class="menu-card">
+            <div class="icon">📦</div><h2>Equipamentos</h2>
+            <p>Listar, buscar, cadastrar e analisar com IA</p>
+        </a>
+        <a href="/cotacoes.html" class="menu-card">
+            <div class="icon">💰</div><h2>Cotações</h2>
+            <p>Comparar fornecedores e exportar EML</p>
+        </a>
+        <a href="/usuarios.html" class="menu-card admin-only" id="card-usuarios">
+            <div class="icon">👥</div><h2>Usuários</h2>
+            <p>Cadastrar e gerenciar contas</p>
+        </a>
+        <a href="/playground.html" class="menu-card">
+            <div class="icon">🐣</div><h2>Playground</h2>
+            <p>Executar scripts Icube no navegador</p>
+        </a>
+    </div>
+</div>
+
+<script>
+// ===== Auth helpers =====
+async function apiMe() {
+    try {
+        const r = await fetch('/api/me', { credentials: 'include' });
+        return await r.json();
+    } catch (e) {
+        return { authenticated: false, error: String(e) };
+    }
+}
+
+// ===== View switching =====
+const viewLogin = document.getElementById('view-login');
+const viewMenu = document.getElementById('view-menu');
+const loginForm = document.getElementById('login-form');
+const btnEntrar = document.getElementById('btn-entrar');
+const loginMsg = document.getElementById('login-msg');
+
+function showLogin() {
+    viewMenu.classList.add('hidden');
+    viewLogin.classList.remove('hidden');
+    setTimeout(() => document.getElementById('username')?.focus(), 50);
+}
+
+function showMenu(user) {
+    viewLogin.classList.add('hidden');
+    viewMenu.classList.remove('hidden');
+    const roleLabel = { administrator:'Admin', colaborador:'Colaborador', visitante:'Visitante' }[user.role] || user.role;
+    document.getElementById('user-info').innerHTML =
+        '<span>👤 <strong>' + escHtml(user.username) + '</strong></span>' +
+        '<span class="role">' + escHtml(roleLabel) + '</span>' +
+        '<button onclick="doLogout()">sair</button>';
+    if (user.role !== 'administrator') {
+        document.getElementById('card-usuarios').classList.add('disabled');
+    }
+}
+
+function escHtml(s) {
+    return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+        .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
+function showMsg(text, type) {
+    loginMsg.textContent = text;
+    loginMsg.className = 'login-msg ' + type;
+}
+
+// ===== Login =====
+async function doLogin(e) {
+    if (e) e.preventDefault();
+    const username = document.getElementById('username').value.trim();
+    const password = document.getElementById('password').value;
+    if (!username || !password) { showMsg('Preencha usuário e senha', 'error'); return; }
+
+    btnEntrar.disabled = true;
+    btnEntrar.textContent = 'Entrando...';
+    loginMsg.className = 'login-msg';
+
+    try {
+        const resp = await fetch('/api/login', {
+            method: 'POST',
+            credentials: 'include',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username, password }),
+        });
+        const data = await resp.json();
+
+        if (!data.ok) {
+            showMsg(data.error || 'Erro ao entrar', 'error');
+            document.getElementById('password').value = '';
+            return;
+        }
+
+        await new Promise(r => setTimeout(r, 150));
+        const me = await apiMe();
+        if (!me.authenticated) {
+            showMsg('Login OK mas cookie não foi salvo. Use janela anônima ou verifique HTTPS.', 'error');
+            return;
+        }
+
+        document.getElementById('password').value = '';
+        loginMsg.className = 'login-msg';
+        showMenu(me.user);
+    } catch (err) {
+        showMsg('Erro de rede: ' + err.message, 'error');
+    } finally {
+        btnEntrar.disabled = false;
+        btnEntrar.textContent = 'Entrar';
+    }
+}
+
+loginForm.addEventListener('submit', doLogin);
+
+// ===== Logout =====
+async function doLogout() {
+    try {
+        await fetch('/api/logout', { method: 'POST', credentials: 'include' });
+    } catch(e) {}
+    showLogin();
+    document.getElementById('username').value = '';
+    document.getElementById('password').value = '';
+    loginMsg.className = 'login-msg';
+}
+
+// ===== Init =====
+(async () => {
+    const me = await apiMe();
+    if (me.authenticated) showMenu(me.user);
+    else showLogin();
+})();
+</script>
+
+</body>
+</html>

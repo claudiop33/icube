@@ -1,0 +1,13 @@
+// Padrão de saída antecipada
+let db_url = env("ICUBE_DB_URL");
+if db_url == null || len(db_url as string) == 0 {
+    print("ICUBE_DB_URL não configurada");
+    exit(1);
+}
+
+db.connect_default();
+print("Conectado");
+
+// ... resto do script
+
+print("Fim");

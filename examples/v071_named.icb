@@ -1,0 +1,15 @@
+// Listar conexões disponíveis
+let nomes = db.connections();
+print("Conexões disponíveis:", nomes);
+
+if len(nomes) == 0 {
+    print("Nenhuma conexão configurada. Crie um icube.toml.");
+    exit(1);
+}
+
+// Conectar por nome
+db.connect_named("bexdex");
+print("Conectado a bexdex");
+
+let r = db.query("SELECT 1 AS ok");
+print("Query funcionou:", r[0]["ok"]);

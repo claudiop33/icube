@@ -1,0 +1,63 @@
+// 1) Captura de erro de divisão
+try {
+    let x = 10 / 0;
+    print("Nunca imprime:", x);
+} catch e {
+    print("Divisão falhou:", e);
+}
+
+// 2) Lançamento manual
+fn validar_idade(idade: int) {
+    if idade < 0 {
+        throw "idade não pode ser negativa";
+    }
+    if idade > 150 {
+        throw "idade absurda";
+    }
+    print("Idade válida:", idade);
+}
+
+try {
+    validar_idade(-5);
+} catch e {
+    print("Erro capturado:", e);
+}
+
+try {
+    validar_idade(200);
+} catch e {
+    print("Erro capturado:", e);
+}
+
+try {
+    validar_idade(30);
+} catch e {
+    print("Não deveria chegar aqui");
+}
+
+// 3) Captura de acesso fora dos limites
+let arr = [1, 2, 3];
+try {
+    print("Elemento:", arr[10]);
+} catch e {
+    print("Erro de índice:", e);
+}
+
+// 4) Re-throw
+fn operacao_arriscada() {
+    try {
+        let _ = 1 / 0;
+    } catch e {
+        print("Logando erro:", e);
+        throw "operação abortada: " + e;
+    }
+}
+
+try {
+    operacao_arriscada();
+} catch e {
+    print("Erro final:", e);
+}
+
+// 5) Erro fora de try ainda aborta
+print("Fim do teste");

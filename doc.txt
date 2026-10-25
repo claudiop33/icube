@@ -1,0 +1,4 @@
+cd /home/lab/icube
+pkill -f "icube --serve" 2>/dev/null
+sleep 1
+ICUBE_TLS_AUTO=1 ./target/release/icube --serve 9000

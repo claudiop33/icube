@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Equipamentos - Icube</title>
+<style>
+  :root {
+    --primary: #1976d2;
+    --bg: #f5f5f5;
+    --card-bg: #fff;
+    --border: #e0e0e0;
+    --text: #333;
+    --text-muted: #666;
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 20px;
+    background: var(--bg);
+    color: var(--text);
+  }
+  header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+  }
+  h1 { margin: 0; font-size: 28px; }
+  .refresh-btn {
+    padding: 10px 20px;
+    background: var(--primary);
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 600;
+  }
+  .refresh-btn:hover { background: #1565c0; }
+  .refresh-btn:disabled { background: #ccc; cursor: not-allowed; }
+
+  .stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 12px;
+    margin-bottom: 24px;
+  }
+  .stat {
+    background: var(--card-bg);
+    padding: 16px 20px;
+    border-radius: 8px;
+    box-shadow: 0 1px 3px rgba(0,0,0,.08);
+  }
+  .stat .n { font-size: 28px; font-weight: 700; color: var(--primary); }
+  .stat .label {
+    font-size: 11px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-top: 4px;
+  }
+
+  .filters {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+  }
+  .filters input, .filters select {
+    padding: 10px 14px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-size: 14px;
+    min-width: 200px;
+  }
+  .filters button {
+    padding: 10px 20px;
+    background: var(--primary);
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 600;
+  }
+  .filters button.secondary {
+    background: #e0e0e0;
+    color: var(--text);
+  }
+
+  table {
+    width: 100%;
+    background: var(--card-bg);
+    border-collapse: collapse;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0,0,0,.08);
+  }
+  th {
+    background: var(--primary);
+    color: white;
+    padding: 12px 16px;
+    text-align: left;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-weight: 600;
+  }
+  td {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+    font-size: 14px;
+  }
+  tr:last-child td { border-bottom: none; }
+  tr:hover { background: #fafafa; }
+
+  .status {
+    display: inline-block;
+    padding: 4px 10px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+  }
+  .status-avaliacao { background: #fff3e0; color: #e65100; }
+  .status-pecas { background: #fce4ec; color: #c2185b; }
+  .status-reparado { background: #e8f5e9; color: #2e7d32; }
+  .status-liberado { background: #e3f2fd; color: #1565c0; }
+
+  .pagination {
+    display: flex;
+    justify-content: center;
+    gap: 6px;
+    margin-top: 20px;
+    flex-wrap: wrap;
+  }
+  .pagination button {
+    padding: 8px 14px;
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+  }
+  .pagination button:hover { background: #f0f0f0; }
+  .pagination button.active {
+    background: var(--primary);
+    color: white;
+    border-color: var(--primary);
+  }
+  .pagination button:disabled { color: #ccc; cursor: not-allowed; }
+
+  .state {
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--text-muted);
+  }
+  .state.error {
+    background: #ffebee;
+    color: #c62828;
+    border-radius: 8px;
+    text-align: left;
+  }
+  .state pre { white-space: pre-wrap; font-size: 13px; }
+
+  .empty {
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--text-muted);
+    background: var(--card-bg);
+    border-radius: 8px;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>📦 Equipamentos</h1>
+  <button class="refresh-btn" id="btn-refresh" onclick="carregarTudo()">↻ Atualizar</button>
+</header>
+
+<div class="stats" id="stats">
+  <div class="stat"><div class="n">–</div><div class="label">Total</div></div>
+</div>
+
+<div class="filters">
+  <input type="text" id="busca" placeholder="Buscar por código..." onkeydown="if(event.key==='Enter')aplicarFiltros()" />
+  <select id="status">
+    <option value="">Todos os status</option>
+    <option value="avaliacao">Avaliação</option>
+    <option value="pecas">Peças</option>
+    <option value="reparado">Reparado</option>
+    <option value="liberado">Liberado</option>
+  </select>
+  <button onclick="aplicarFiltros()">🔍 Filtrar</button>
+  <button class="secondary" onclick="limparFiltros()">Limpar</button>
+</div>
+
+<div id="content">
+  <div class="state">Carregando...</div>
+</div>
+
+<div class="pagination" id="pagination"></div>
+
+<script>
+const POR_PAGINA = 20;
+let paginaAtual = 1;
+let filtros = { busca: "", status: "" };
+let totalRegistros = 0;
+
+// Escapa strings para literais Icube (aspas duplas)
+function escapeIcube(s) {
+  return String(s).replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+}
+
+// Classificação CSS do status
+function statusClass(s) {
+  const map = {
+    'avaliacao': 'status-avaliacao',
+    'pecas': 'status-pecas',
+    'reparado': 'status-reparado',
+    'liberado': 'status-liberado'
+  };
+  return map[s] || '';
+}
+
+// Chama /api/equipamentos com código Icube
+async function executarIcube(codigo) {
+  const resp = await fetch('/api/equipamentos', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ code: codigo })
+  });
+  if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+  return resp.json();
+}
+
+// Constrói a cláusula WHERE para os filtros
+function buildWhere() {
+  const parts = [];
+  if (filtros.busca) {
+    parts.push(`(codigo_letras || '-' || codigo_numeros) ILIKE $busca`);
+  }
+  if (filtros.status) {
+    parts.push(`status = $status`);
+  }
+  return parts.length > 0 ? parts.join(" AND ") : "1=1";
+}
+
+// Retorna o literal Icube do valor de busca (parametrizado)
+function buscaLiteral() {
+  if (!filtros.busca) return '""';
+  return `"%" + "${escapeIcube(filtros.busca)}" + "%"`;
+}
+
+function statusLiteral() {
+  return filtros.status ? `"${escapeIcube(filtros.status)}"` : '""';
+}
+
+// Carrega stats gerais
+async function carregarStats() {
+  const script = `
+    db.connect_default();
+    let total = db.query_one("SELECT COUNT(*) AS n FROM equipamentos");
+    let av = db.query_one("SELECT COUNT(*) AS n FROM equipamentos WHERE status = 'avaliacao'");
+    let pc = db.query_one("SELECT COUNT(*) AS n FROM equipamentos WHERE status = 'pecas'");
+    let rp = db.query_one("SELECT COUNT(*) AS n FROM equipamentos WHERE status = 'reparado'");
+    let lb = db.query_one("SELECT COUNT(*) AS n FROM equipamentos WHERE status = 'liberado'");
+    print(total["n"]);
+    print(av["n"]);
+    print(pc["n"]);
+    print(rp["n"]);
+    print(lb["n"]);
+  `;
+  const resp = await executarIcube(script);
+  if (!resp.ok) throw new Error(resp.error);
+  const [total, av, pc, rp, lb] = resp.output.trim().split('\n');
+  document.getElementById('stats').innerHTML = `
+    <div class="stat"><div class="n">${total}</div><div class="label">Total</div></div>
+    <div class="stat"><div class="n">${av}</div><div class="label">Avaliação</div></div>
+    <div class="stat"><div class="n">${pc}</div><div class="label">Peças</div></div>
+    <div class="stat"><div class="n">${rp}</div><div class="label">Reparado</div></div>
+    <div class="stat"><div class="n">${lb}</div><div class="label">Liberado</div></div>
+  `;
+}
+
+// Carrega a tabela paginada
+async function carregarTabela() {
+  document.getElementById('content').innerHTML = '<div class="state">Carregando...</div>';
+  const offset = (paginaAtual - 1) * POR_PAGINA;
+  const where = buildWhere();
+  const buscaParam = filtros.busca ? buscaLiteral() : '""';
+  const statusParam = filtros.status ? statusLiteral() : '""';
+  const usaBusca = filtros.busca ? true : false;
+  const usaStatus = filtros.status ? true : false;
+
+  let sql;
+  let params;
+  if (usaBusca && usaStatus) {
+    sql = `SELECT id, codigo_letras, codigo_numeros, modelo, data_entrada, status FROM equipamentos WHERE (codigo_letras || '-' || codigo_numeros) ILIKE $1 AND status = $2 ORDER BY id DESC LIMIT ${POR_PAGINA} OFFSET ${offset}`;
+    params = `[${buscaParam}, ${statusParam}]`;
+  } else if (usaBusca) {
+    sql = `SELECT id, codigo_letras, codigo_numeros, modelo, data_entrada, status FROM equipamentos WHERE (codigo_letras || '-' || codigo_numeros) ILIKE $1 ORDER BY id DESC LIMIT ${POR_PAGINA} OFFSET ${offset}`;
+    params = `[${buscaParam}]`;
+  } else if (usaStatus) {
+    sql = `SELECT id, codigo_letras, codigo_numeros, modelo, data_entrada, status FROM equipamentos WHERE status = $1 ORDER BY id DESC LIMIT ${POR_PAGINA} OFFSET ${offset}`;
+    params = `[${statusParam}]`;
+  } else {
+    sql = `SELECT id, codigo_letras, codigo_numeros, modelo, data_entrada, status FROM equipamentos ORDER BY id DESC LIMIT ${POR_PAGINA} OFFSET ${offset}`;
+    params = `[]`;
+  }
+
+  // Contagem para paginação (mesmo WHERE)
+  const countSql = usaBusca || usaStatus
+    ? (usaBusca && usaStatus
+        ? `SELECT COUNT(*) AS n FROM equipamentos WHERE (codigo_letras || '-' || codigo_numeros) ILIKE $1 AND status = $2`
+        : usaBusca
+          ? `SELECT COUNT(*) AS n FROM equipamentos WHERE (codigo_letras || '-' || codigo_numeros) ILIKE $1`
+          : `SELECT COUNT(*) AS n FROM equipamentos WHERE status = $1`)
+    : `SELECT COUNT(*) AS n FROM equipamentos`;
+  const countParams = usaBusca || usaStatus
+    ? (usaBusca && usaStatus ? `[${buscaParam}, ${statusParam}]` : (usaBusca ? `[${buscaParam}]` : `[${statusParam}]`))
+    : `[]`;
+
+  const script = `
+    db.connect_default();
+    let eq = db.query("${escapeIcube(sql)}", ${params});
+    let t = db.query_one("${escapeIcube(countSql)}", ${countParams});
+    print(eq);
+    print(t["n"]);
+  `;
+
+  const resp = await executarIcube(script);
+  if (!resp.ok) {
+    document.getElementById('content').innerHTML = `<div class="state error"><strong>Erro:</strong><pre>${resp.error}</pre></div>`;
+    return;
+  }
+
+  const linhas = resp.output.trim().split('\n');
+  const dados = JSON.parse(linhas[0]);
+  totalRegistros = parseInt(linhas[1]);
+
+  renderTabela(dados);
+  renderPaginacao();
+}
+
+function renderTabela(dados) {
+  if (dados.length === 0) {
+    document.getElementById('content').innerHTML = '<div class="empty">Nenhum equipamento encontrado</div>';
+    return;
+  }
+  let html = '<table><thead><tr><th>ID</th><th>Código</th><th>Modelo</th><th>Entrada</th><th>Status</th></tr></thead><tbody>';
+  for (const e of dados) {
+    const codigo = (e.codigo_letras || '') + '-' + (e.codigo_numeros || '');
+    const st = e.status || '';
+    html += `<tr>
+      <td>#${e.id ?? '–'}</td>
+      <td><strong>${codigo}</strong></td>
+      <td>${e.modelo || '–'}</td>
+      <td>${e.data_entrada || '–'}</td>
+      <td><span class="status ${statusClass(st)}">${st}</span></td>
+    </tr>`;
+  }
+  html += '</tbody></table>';
+  document.getElementById('content').innerHTML = html;
+}
+
+function renderPaginacao() {
+  const totalPaginas = Math.max(1, Math.ceil(totalRegistros / POR_PAGINA));
+  if (totalPaginas <= 1) {
+    document.getElementById('pagination').innerHTML = '';
+    return;
+  }
+  let html = '';
+  html += `<button onclick="irPagina(1)" ${paginaAtual === 1 ? 'disabled' : ''}>« Primeira</button>`;
+  html += `<button onclick="irPagina(${paginaAtual - 1})" ${paginaAtual === 1 ? 'disabled' : ''}>‹ Anterior</button>`;
+  const inicio = Math.max(1, paginaAtual - 2);
+  const fim = Math.min(totalPaginas, paginaAtual + 2);
+  for (let i = inicio; i <= fim; i++) {
+    html += `<button class="${i === paginaAtual ? 'active' : ''}" onclick="irPagina(${i})">${i}</button>`;
+  }
+  html += `<button onclick="irPagina(${paginaAtual + 1})" ${paginaAtual === totalPaginas ? 'disabled' : ''}>Próxima ›</button>`;
+  html += `<button onclick="irPagina(${totalPaginas})" ${paginaAtual === totalPaginas ? 'disabled' : ''}>Última »</button>`;
+  document.getElementById('pagination').innerHTML = html;
+}
+
+function irPagina(n) {
+  const totalPaginas = Math.max(1, Math.ceil(totalRegistros / POR_PAGINA));
+  if (n < 1 || n > totalPaginas) return;
+  paginaAtual = n;
+  carregarTabela();
+}
+
+function aplicarFiltros() {
+  filtros.busca = document.getElementById('busca').value.trim();
+  filtros.status = document.getElementById('status').value;
+  paginaAtual = 1;
+  carregarTabela();
+}
+
+function limparFiltros() {
+  document.getElementById('busca').value = '';
+  document.getElementById('status').value = '';
+  filtros = { busca: "", status: "" };
+  paginaAtual = 1;
+  carregarTabela();
+}
+
+async function carregarTudo() {
+  const btn = document.getElementById('btn-refresh');
+  btn.disabled = true;
+  try {
+    await Promise.all([carregarStats(), carregarTabela()]);
+  } catch (e) {
+    document.getElementById('content').innerHTML = `<div class="state error"><strong>Erro de rede:</strong> ${e.message}</div>`;
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+// Carrega ao abrir a página
+document.addEventListener('DOMContentLoaded', carregarTudo);
+</script>
+</body>
+</html>

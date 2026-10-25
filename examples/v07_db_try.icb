@@ -1,0 +1,42 @@
+// Padrao robusto de acesso ao banco
+let db_url = env("ICUBE_DB_URL");
+
+if db_url == null {
+    print("ICUBE_DB_URL nao configurada");
+    print("Exemplo: postgres://user:pass@host:5432/db?sslmode=require");
+} else {
+    try {
+        db.connect(db_url as string);
+        print("Conectado");
+    } catch e {
+        print("Falha ao conectar:", e);
+        throw "operacao abortada: sem conexao";
+    }
+
+    try {
+        db.execute("CREATE TABLE IF NOT EXISTS icube_v07 (id SERIAL PRIMARY KEY, nome TEXT)");
+        print("Tabela pronta");
+    } catch e {
+        print("Aviso ao criar tabela:", e);
+    }
+
+    try {
+        db.execute("TRUNCATE icube_v07 RESTART IDENTITY");
+        let nomes = ["Ana", "Bruno", "Carla"];
+        for nome in nomes {
+            db.execute("INSERT INTO icube_v07 (nome) VALUES ($1)", [nome]);
+        }
+        print("Inseridos:", db.query("SELECT COUNT(*) AS n FROM icube_v07")[0]["n"]);
+    } catch e {
+        print("Erro ao inserir:", e);
+    }
+
+    try {
+        let _ = db.query("SELECT * FROM tabela_que_nao_existe");
+        print("Nunca chega aqui");
+    } catch e {
+        print("Esperado - tabela nao existe:", e);
+    }
+
+    print("Fim");
+}

@@ -1,0 +1,23 @@
+
+// Teste 3: classificação de sentimento
+if ai.is_available() {
+    let system = "Você é um classificador de sentimento. Responda apenas com UMA palavra: positivo, negativo ou neutro.";
+
+    // Sem array literal — declaramos cada frase em uma variável
+    let t1 = "Adorei o produto, superou minhas expectativas!";
+    let t2 = "Que decepção, não funcionou de jeito nenhum.";
+    let t3 = "O produto chegou no prazo.";
+
+    print("Classificando 3 frases...\n");
+
+    print("Frase 1:", t1);
+    print("  ->", ai.ask_with_system(system, t1), "\n");
+
+    print("Frase 2:", t2);
+    print("  ->", ai.ask_with_system(system, t2), "\n");
+
+    print("Frase 3:", t3);
+    print("  ->", ai.ask_with_system(system, t3), "\n");
+} else {
+    print("Ollama não disponível");
+}

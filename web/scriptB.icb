@@ -1,0 +1,23 @@
+db.connect_default();
+
+// ALTERE AQUI para buscar:
+let busca = "NB-24";
+
+print("🔍 Buscando por: " + busca);
+print("");
+
+let resultados = db.query(
+    "SELECT id, codigo_letras, codigo_numeros, modelo, data_entrada, status FROM equipamentos WHERE (codigo_letras || '-' || codigo_numeros) ILIKE $1 ORDER BY id DESC",
+    ["%" + busca + "%"]
+);
+
+print("Encontrados: " + (len(resultados) as string));
+print("");
+
+for e in resultados {
+    print("#" + (e["id"] as string) + "  " + (e["codigo_letras"] as string) + "-" + (e["codigo_numeros"] as string));
+    print("   Modelo:  " + (e["modelo"] as string));
+    print("   Entrada: " + (e["data_entrada"] as string));
+    print("   Status:  " + (e["status"] as string));
+    print("");
+}
