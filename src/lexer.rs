@@ -9,6 +9,7 @@ pub enum TokenKind {
 
     Let, Fn, If, Else, While, Return, As, For, In, Break, Continue,
     Try, Catch, Finally, Throw,
+    Struct, SelfKw,
 
     IntType, FloatType, BoolType, StringType,
     DecimalType,
@@ -174,6 +175,8 @@ impl Lexer {
             "finally" => TokenKind::Finally,
             "throw" => TokenKind::Throw,
             "return" => TokenKind::Return,
+            "struct" => TokenKind::Struct,
+            "self" => TokenKind::SelfKw,
             "as" => TokenKind::As,
             "true" => TokenKind::Bool(true),
             "false" => TokenKind::Bool(false),

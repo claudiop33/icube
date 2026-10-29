@@ -125,9 +125,7 @@ impl AppState {
         let mut sessions = self.sessions.lock().unwrap_or_else(|e| e.into_inner());
         if let Some(s) = sessions.get_mut(session_id) {
             s.user = None;
-            if let Ok(mut e) = s.evaluator.lock() {
-                e.reset();
-            }
+            s.evaluator.lock().unwrap_or_else(|e| e.into_inner()).reset();
         }
     }
 
@@ -258,7 +256,8 @@ async fn serve(port: u16) -> Result<(), String> {
             None
         } else {
             match sqlx::postgres::PgPoolOptions::new()
-                .max_connections(5)
+                .max_connections(2)
+                .acquire_timeout(Duration::from_secs(5))
                 .connect(&url).await {
                 Ok(pool) => Some(pool),
                 Err(e) => {
@@ -302,13 +301,19 @@ async fn serve(port: u16) -> Result<(), String> {
         .route("/api/users/:id/role", post(api_users_role))
         .route("/api/users/:id/delete", post(api_users_delete))
         .route("/api/dev/reset-admin", post(dev_reset_admin))
+        .route("/api/serial/ports", get(api_serial_ports))
+        .route("/api/serial/open", post(api_serial_open))
+        .route("/api/serial/send", post(api_serial_send))
+        .route("/api/serial/read", get(api_serial_read))
+        .route("/api/serial/close", post(api_serial_close))
         .fallback_service(serve_dir)
         .layer(Extension(www_path))
         .with_state(state);
 
     let scheme = if use_tls { "https" } else { "http" };
+    let allow_exec_banner = std::env::var("ICUBE_ALLOW_EXEC").as_deref() == Ok("1");
     println!("╔══════════════════════════════════════════════╗");
-    println!("║  Icube Server v0.7.6                         ║");
+    println!("║  Icube Server v0.8.0                       ║");
     println!("║  {}://localhost:{:<4}                       ║", scheme, port);
     println!("╚══════════════════════════════════════════════╝");
     println!();
@@ -317,6 +322,7 @@ async fn serve(port: u16) -> Result<(), String> {
     println!("  Auth:               {}", if auth_required { "OBRIGATÓRIA" } else { "OPCIONAL" });
     println!("  Cookie Secure:      {}", if secure_cookies { "SIM" } else { "NÃO" });
     println!("  Pool de auth:       {}", if has_db_pool { "OK" } else { "NÃO CONFIGURADO" });
+    println!("  exec() no servidor: {}", if allow_exec_banner { "HABILITADO ⚠" } else { "bloqueado (padrão)" });
     println!();
 
     let addr: SocketAddr = format!("0.0.0.0:{}", port)
@@ -918,9 +924,7 @@ async fn session_reset(State(state): State<AppState>, headers: HeaderMap) -> Res
     };
     let sessions = state.sessions.lock().unwrap_or_else(|e| e.into_inner());
     if let Some(s) = sessions.get(&sid) {
-        if let Ok(mut eval) = s.evaluator.lock() {
-            eval.reset();
-        }
+        s.evaluator.lock().unwrap_or_else(|e| e.into_inner()).reset();
         Json(serde_json::json!({"ok": true, "message": "sessão resetada"})).into_response()
     } else {
         Json(serde_json::json!({"ok": false, "error": "sessão não encontrada"})).into_response()
@@ -934,7 +938,9 @@ async fn session_info(State(state): State<AppState>, headers: HeaderMap) -> Resp
     let sessions = state.sessions.lock().unwrap_or_else(|e| e.into_inner());
     if let Some(s) = sessions.get(&sid) {
         let uptime = Instant::now().duration_since(s.last_used).as_secs();
-        let vars_count = s.evaluator.lock().unwrap_or_else(|e| e.into_inner()).vars_count();
+        let vars_count = s.evaluator.lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .vars_count();
         Json(SessionInfoOut {
             session_id: sid,
             uptime_secs: uptime,
@@ -946,6 +952,20 @@ async fn session_info(State(state): State<AppState>, headers: HeaderMap) -> Resp
 }
 
 fn run_script(eval: &mut Evaluator, src: &str, timeout_secs: u64) -> Result<String, String> {
+    // Auto-inserir ; se nao terminar em ; { }
+    let trimmed = src.trim();
+    let src_owned;
+    let src: &str = if !trimmed.is_empty()
+        && !trimmed.ends_with(';')
+        && !trimmed.ends_with('{')
+        && !trimmed.ends_with('}')
+    {
+        src_owned = format!("{};", trimmed);
+        &src_owned
+    } else {
+        src
+    };
+
     let tokens = crate::lexer::Lexer::new(src)
         .tokenize().map_err(|e| format!("erro léxico: {}", e))?;
 
@@ -953,9 +973,16 @@ fn run_script(eval: &mut Evaluator, src: &str, timeout_secs: u64) -> Result<Stri
     let program = parser.parse_program().map_err(|e| format!("erro sintático: {}", e))?;
 
     let initial_types = eval.initial_types();
+    let initial_structs = eval.initial_structs();
+    let initial_functions = eval.initial_functions();
     let checker = crate::type_checker::TypeChecker::new();
-    checker.check_program_with_env(&program, initial_types)
+    checker.check_program_with_env_structs_fns(&program, initial_types, initial_structs, initial_functions)
         .map_err(|e| format!("erro de tipo: {}", e))?;
+
+    // ⭐ NOVO: exec() desabilitado por padrão no servidor (segurança).
+    // Habilita apenas se ICUBE_ALLOW_EXEC=1.
+    let allow_exec = std::env::var("ICUBE_ALLOW_EXEC").as_deref() == Ok("1");
+    eval.set_allow_exec(allow_exec);
 
     eval.set_timeout(Duration::from_secs(timeout_secs));
     eval.begin_capture();
@@ -1041,6 +1068,191 @@ async fn upload_photo(
         Some(url) => Json(serde_json::json!({"ok": true, "url": url})).into_response(),
         None => Json(serde_json::json!({
             "ok": false, "error": "Nenhum arquivo recebido (campo 'file')"
+        })).into_response(),
+    }
+}
+
+
+// ============================================================================
+// SERIAL (Arduino / USB)
+// ============================================================================
+
+#[derive(Serialize)]
+struct SerialPortOut {
+    porta: String,
+    descricao: String,
+}
+
+async fn api_serial_ports() -> Response {
+    let ports = crate::hardware::SerialDevice::list_ports();
+    let list: Vec<SerialPortOut> = ports.into_iter()
+        .map(|(porta, descricao)| SerialPortOut { porta, descricao })
+        .collect();
+    Json(serde_json::json!({ "ok": true, "ports": list })).into_response()
+}
+
+#[derive(Deserialize)]
+struct SerialOpenReq {
+    porta: String,
+    baud: u32,
+}
+
+async fn api_serial_open(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Json(req): Json<SerialOpenReq>,
+) -> Response {
+    if require_auth(&state, &headers).is_none() {
+        return (StatusCode::UNAUTHORIZED, Json(serde_json::json!({
+            "ok": false, "error": "Nao autenticado"
+        }))).into_response();
+    }
+
+    let Some(sid) = parse_cookie(&headers, SESSION_COOKIE) else {
+        return Json(serde_json::json!({"ok": false, "error": "sem sessao"})).into_response();
+    };
+
+    let Some(evaluator_arc) = state.session_evaluator(&sid) else {
+        return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
+            "ok": false, "error": "sessao invalida"
+        }))).into_response();
+    };
+
+    let porta = req.porta.clone();
+    let baud = req.baud;
+
+    let result = tokio::task::spawn_blocking(move || {
+        let mut eval = evaluator_arc.lock().unwrap_or_else(|e| e.into_inner());
+        eval.serial_open(&porta, baud)
+    }).await;
+
+    match result {
+        Ok(Ok(())) => Json(serde_json::json!({
+            "ok": true,
+            "porta": req.porta,
+            "baud": req.baud
+        })).into_response(),
+        Ok(Err(e)) => Json(serde_json::json!({
+            "ok": false, "error": e
+        })).into_response(),
+        Err(join) => Json(serde_json::json!({
+            "ok": false, "error": format!("erro interno: {}", join)
+        })).into_response(),
+    }
+}
+
+#[derive(Deserialize)]
+struct SerialSendReq {
+    mensagem: String,
+}
+
+async fn api_serial_send(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Json(req): Json<SerialSendReq>,
+) -> Response {
+    if require_auth(&state, &headers).is_none() {
+        return (StatusCode::UNAUTHORIZED, Json(serde_json::json!({
+            "ok": false, "error": "Nao autenticado"
+        }))).into_response();
+    }
+
+    let Some(sid) = parse_cookie(&headers, SESSION_COOKIE) else {
+        return Json(serde_json::json!({"ok": false, "error": "sem sessao"})).into_response();
+    };
+
+    let Some(evaluator_arc) = state.session_evaluator(&sid) else {
+        return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
+            "ok": false, "error": "sessao invalida"
+        }))).into_response();
+    };
+
+    let mensagem = req.mensagem.clone();
+
+    let result = tokio::task::spawn_blocking(move || {
+        let mut eval = evaluator_arc.lock().unwrap_or_else(|e| e.into_inner());
+        eval.serial_send(&mensagem)
+    }).await;
+
+    match result {
+        Ok(Ok(())) => Json(serde_json::json!({ "ok": true })).into_response(),
+        Ok(Err(e)) => Json(serde_json::json!({ "ok": false, "error": e })).into_response(),
+        Err(join) => Json(serde_json::json!({
+            "ok": false, "error": format!("erro interno: {}", join)
+        })).into_response(),
+    }
+}
+
+async fn api_serial_read(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+) -> Response {
+    if require_auth(&state, &headers).is_none() {
+        return (StatusCode::UNAUTHORIZED, Json(serde_json::json!({
+            "ok": false, "error": "Nao autenticado"
+        }))).into_response();
+    }
+
+    let Some(sid) = parse_cookie(&headers, SESSION_COOKIE) else {
+        return Json(serde_json::json!({"ok": false, "error": "sem sessao"})).into_response();
+    };
+
+    let Some(evaluator_arc) = state.session_evaluator(&sid) else {
+        return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
+            "ok": false, "error": "sessao invalida"
+        }))).into_response();
+    };
+
+    let result = tokio::task::spawn_blocking(move || {
+        let mut eval = evaluator_arc.lock().unwrap_or_else(|e| e.into_inner());
+        eval.serial_read_available()
+    }).await;
+
+    match result {
+        Ok(Ok(data)) => Json(serde_json::json!({
+            "ok": true,
+            "data": data,
+            "empty": data.is_empty()
+        })).into_response(),
+        Ok(Err(e)) => Json(serde_json::json!({
+            "ok": false, "error": e, "data": ""
+        })).into_response(),
+        Err(join) => Json(serde_json::json!({
+            "ok": false, "error": format!("erro interno: {}", join), "data": ""
+        })).into_response(),
+    }
+}
+
+async fn api_serial_close(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+) -> Response {
+    if require_auth(&state, &headers).is_none() {
+        return (StatusCode::UNAUTHORIZED, Json(serde_json::json!({
+            "ok": false, "error": "Nao autenticado"
+        }))).into_response();
+    }
+
+    let Some(sid) = parse_cookie(&headers, SESSION_COOKIE) else {
+        return Json(serde_json::json!({"ok": false, "error": "sem sessao"})).into_response();
+    };
+
+    let Some(evaluator_arc) = state.session_evaluator(&sid) else {
+        return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
+            "ok": false, "error": "sessao invalida"
+        }))).into_response();
+    };
+
+    let result = tokio::task::spawn_blocking(move || {
+        let mut eval = evaluator_arc.lock().unwrap_or_else(|e| e.into_inner());
+        eval.serial_close()
+    }).await;
+
+    match result {
+        Ok(Ok(())) => Json(serde_json::json!({ "ok": true })).into_response(),
+        Ok(Err(e)) => Json(serde_json::json!({ "ok": false, "error": e })).into_response(),
+        Err(join) => Json(serde_json::json!({
+            "ok": false, "error": format!("erro interno: {}", join)
         })).into_response(),
     }
 }

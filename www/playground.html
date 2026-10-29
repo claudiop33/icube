@@ -1,0 +1,804 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Playground — Icube</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🐣</text></svg>">
+    <style>
+        :root {
+            --primary: #1976d2;
+            --primary-light: #42a5f5;
+            --primary-dark: #0d47a1;
+            --accent: #64b5f6;
+            --accent-purple: #a78bfa;
+            --bg: #0a0e14;
+            --bg-alt: #0d1117;
+            --bg-card: #161b22;
+            --bg-card-hover: #1c2128;
+            --text: #e6edf3;
+            --text-muted: #8b949e;
+            --border: #21262d;
+            --border-strong: #30363d;
+            --success: #3fb950;
+            --danger: #f85149;
+            --warning: #d29922;
+            --font-mono: 'JetBrains Mono', 'Fira Code', 'Consolas', 'Monaco', monospace;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html, body { height: 100%; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.55;
+            -webkit-font-smoothing: antialiased;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden;
+        }
+        a { color: var(--primary-light); text-decoration: none; }
+        a:hover { text-decoration: underline; }
+
+        /* HEADER */
+        .header {
+            background: var(--bg-card);
+            border-bottom: 1px solid var(--border);
+            padding: 12px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            flex-shrink: 0;
+        }
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+        .header-left a.home {
+            color: var(--text-muted);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.9rem;
+            padding: 6px 12px;
+            border-radius: 6px;
+            transition: all 0.15s;
+        }
+        .header-left a.home:hover {
+            background: var(--bg-card-hover);
+            color: var(--text);
+            text-decoration: none;
+        }
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 1.15rem;
+            font-weight: 700;
+            color: var(--text);
+        }
+        .logo-icon { font-size: 1.3rem; }
+
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 5px 12px;
+            border-radius: 16px;
+            font-size: 0.78rem;
+            font-weight: 600;
+            background: var(--bg-alt);
+            border: 1px solid var(--border);
+            color: var(--text-muted);
+        }
+        .badge .dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: var(--success);
+        }
+        .badge.loading .dot {
+            background: var(--warning);
+            animation: pulse 1.2s infinite;
+        }
+        .badge.error .dot { background: var(--danger); }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.4; }
+        }
+        .btn-header {
+            background: var(--bg-alt);
+            border: 1px solid var(--border-strong);
+            color: var(--text);
+            padding: 6px 14px;
+            border-radius: 6px;
+            font-size: 0.82rem;
+            font-weight: 600;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.15s;
+            font-family: inherit;
+        }
+        .btn-header:hover {
+            background: var(--bg-card-hover);
+            border-color: var(--text-muted);
+        }
+
+        /* MAIN LAYOUT */
+        .main {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            flex: 1;
+            min-height: 0;
+        }
+
+        /* LEFT: EDITOR */
+        .panel {
+            display: flex;
+            flex-direction: column;
+            min-height: 0;
+            border-right: 1px solid var(--border);
+        }
+        .panel.right {
+            border-right: none;
+            border-left: 1px solid var(--border);
+        }
+        .panel-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            padding: 10px 16px;
+            background: var(--bg-card);
+            border-bottom: 1px solid var(--border);
+            flex-shrink: 0;
+        }
+        .panel-title {
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: var(--text);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .panel-title .icon { font-size: 1rem; }
+        .panel-actions {
+            display: flex;
+            gap: 8px;
+        }
+        .btn-run {
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            border: none;
+            color: white;
+            padding: 7px 16px;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.15s;
+            font-family: inherit;
+        }
+        .btn-run:hover:not(:disabled) {
+            box-shadow: 0 4px 12px rgba(25, 118, 210, 0.4);
+            transform: translateY(-1px);
+        }
+        .btn-run:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        .btn-secondary {
+            background: var(--bg-alt);
+            border: 1px solid var(--border-strong);
+            color: var(--text-muted);
+            padding: 7px 12px;
+            border-radius: 6px;
+            font-size: 0.82rem;
+            font-weight: 600;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.15s;
+            font-family: inherit;
+        }
+        .btn-secondary:hover {
+            background: var(--bg-card-hover);
+            color: var(--text);
+        }
+
+        .editor-wrap {
+            flex: 1;
+            position: relative;
+            min-height: 0;
+            display: flex;
+        }
+        #code {
+            flex: 1;
+            width: 100%;
+            background: var(--bg);
+            color: var(--text);
+            border: none;
+            outline: none;
+            padding: 16px 20px;
+            font-family: var(--font-mono);
+            font-size: 0.9rem;
+            line-height: 1.65;
+            resize: none;
+            tab-size: 4;
+            white-space: pre;
+            overflow: auto;
+        }
+        #code::placeholder {
+            color: var(--text-muted);
+            opacity: 0.6;
+        }
+        .kbd-hint {
+            position: absolute;
+            bottom: 12px;
+            right: 16px;
+            background: rgba(22, 27, 34, 0.9);
+            border: 1px solid var(--border);
+            padding: 6px 10px;
+            border-radius: 6px;
+            font-size: 0.72rem;
+            color: var(--text-muted);
+            font-family: var(--font-mono);
+            pointer-events: none;
+        }
+        .kbd-hint kbd {
+            background: var(--bg-alt);
+            border: 1px solid var(--border-strong);
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 0.7rem;
+            color: var(--text);
+            margin: 0 2px;
+        }
+
+        /* RIGHT: OUTPUT / HISTORY */
+        .output {
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px 20px;
+            min-height: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+        .output:empty::before {
+            content: 'A saída aparecerá aqui quando você executar um script.';
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            text-align: center;
+            margin: auto;
+            display: block;
+            font-style: italic;
+        }
+
+        .entry {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            animation: fadeIn 0.25s ease-out;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(4px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .entry-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            font-family: var(--font-mono);
+            padding-bottom: 4px;
+            border-bottom: 1px solid var(--border);
+        }
+        .entry-header .status {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            font-weight: 600;
+        }
+        .entry-header .status.ok { color: var(--success); }
+        .entry-header .status.err { color: var(--danger); }
+        .entry-header .duration {
+            margin-left: auto;
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            opacity: 0.7;
+        }
+        .entry-code {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 10px 14px;
+            font-family: var(--font-mono);
+            font-size: 0.82rem;
+            color: var(--text-muted);
+            white-space: pre-wrap;
+            word-break: break-all;
+            max-height: 100px;
+            overflow-y: auto;
+        }
+        .entry-output {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-left: 3px solid var(--success);
+            border-radius: 6px;
+            padding: 12px 16px;
+            font-family: var(--font-mono);
+            font-size: 0.85rem;
+            line-height: 1.6;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+        .entry-output.error {
+            border-left-color: var(--danger);
+            color: #ffb4b4;
+        }
+        .entry-output:empty {
+            display: none;
+        }
+
+        /* LOADING */
+        .loading-inline {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--text-muted);
+            font-size: 0.85rem;
+        }
+        .spinner {
+            width: 14px;
+            height: 14px;
+            border: 2px solid var(--border-strong);
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 0.7s linear infinite;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* MODAL RESET */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(4px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            padding: 20px;
+        }
+        .modal-overlay.active { display: flex; }
+        .modal {
+            background: var(--bg-card);
+            border: 1px solid var(--border-strong);
+            border-radius: 12px;
+            padding: 24px;
+            max-width: 420px;
+            width: 100%;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+        }
+        .modal h3 {
+            margin-bottom: 12px;
+            font-size: 1.1rem;
+        }
+        .modal p {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            margin-bottom: 20px;
+        }
+        .modal-actions {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+        }
+        .btn-danger {
+            background: var(--danger);
+            border: none;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+            font-family: inherit;
+        }
+        .btn-danger:hover { background: #d13a3a; }
+
+        /* TOAST */
+        .toast {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            background: var(--bg-card);
+            border: 1px solid var(--border-strong);
+            padding: 12px 18px;
+            border-radius: 8px;
+            font-size: 0.88rem;
+            box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
+            transform: translateX(400px);
+            transition: transform 0.3s ease;
+            z-index: 2000;
+            max-width: 400px;
+        }
+        .toast.show { transform: translateX(0); }
+        .toast.success { border-left: 3px solid var(--success); }
+        .toast.error { border-left: 3px solid var(--danger); }
+        .toast.info { border-left: 3px solid var(--primary); }
+
+        /* RESPONSIVE */
+        @media (max-width: 900px) {
+            .main {
+                grid-template-columns: 1fr;
+                grid-template-rows: 1fr 1fr;
+            }
+            .panel {
+                border-right: none;
+                border-bottom: 1px solid var(--border);
+            }
+            .panel.right {
+                border-left: none;
+                border-bottom: none;
+            }
+            .kbd-hint { display: none; }
+            .header-left a.home span:last-child { display: none; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header class="header">
+    <div class="header-left">
+        <a href="/" class="home">
+            <span>←</span>
+            <span>Voltar</span>
+        </a>
+        <div class="logo">
+            <span class="logo-icon">🐣</span>
+            <span>Icube <span style="color: var(--primary-light);">Playground</span></span>
+        </div>
+    </div>
+    <div class="header-right">
+        <span class="badge" id="session-badge">
+            <span class="dot"></span>
+            <span id="session-text">Conectando...</span>
+        </span>
+        <button class="btn-header" onclick="showResetModal()">
+            🔄 Reset
+        </button>
+    </div>
+</header>
+
+<!-- MAIN -->
+<div class="main">
+
+    <!-- LEFT: EDITOR -->
+    <div class="panel left">
+        <div class="panel-header">
+            <div class="panel-title">
+                <span class="icon">📝</span>
+                <span>Código Icube</span>
+            </div>
+            <div class="panel-actions">
+                <button class="btn-secondary" onclick="clearEditor()">
+                    🗑️ Limpar
+                </button>
+                <button class="btn-run" id="btn-run" onclick="runCode()">
+                    ▶️ Executar
+                </button>
+            </div>
+        </div>
+        <div class="editor-wrap">
+            <textarea
+                id="code"
+                spellcheck="false"
+                autocomplete="off"
+                autocorrect="off"
+                autocapitalize="off"
+                placeholder="// Digite seu código Icube aqui
+// Exemplo:
+let x = 10;
+let y = 20;
+print(x + y);
+
+// Aperte Ctrl+Enter para executar"
+            >// Bem-vindo ao Playground Icube!
+// Variáveis persistem entre execuções nesta sessão.
+
+let a = 10;
+let b = 20;
+print("Soma:", a + b);
+
+let nome = "Icube";
+print("Olá,", nome, "!");</textarea>
+            <div class="kbd-hint">
+                <kbd>Ctrl</kbd> + <kbd>Enter</kbd> para executar
+            </div>
+        </div>
+    </div>
+
+    <!-- RIGHT: OUTPUT -->
+    <div class="panel right">
+        <div class="panel-header">
+            <div class="panel-title">
+                <span class="icon">💬</span>
+                <span>Saída</span>
+            </div>
+            <div class="panel-actions">
+                <button class="btn-secondary" onclick="clearOutput()">
+                    🗑️ Limpar
+                </button>
+            </div>
+        </div>
+        <div class="output" id="output"></div>
+    </div>
+
+</div>
+
+<!-- MODAL RESET -->
+<div class="modal-overlay" id="reset-modal">
+    <div class="modal">
+        <h3>🔄 Resetar sessão?</h3>
+        <p>Isso vai apagar todas as variáveis, funções e a conexão com o banco de dados da sua sessão atual. O código no editor não será afetado.</p>
+        <div class="modal-actions">
+            <button class="btn-secondary" onclick="hideResetModal()">Cancelar</button>
+            <button class="btn-danger" onclick="doReset()">Resetar</button>
+        </div>
+    </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script>
+const API = '/execute';
+let isRunning = false;
+let sessionInfo = null;
+
+// ========================================================================
+// INICIALIZAÇÃO
+// ========================================================================
+async function init() {
+    await checkSession();
+    document.getElementById('code').focus();
+    // Ctrl+Enter para executar
+    document.getElementById('code').addEventListener('keydown', (e) => {
+        if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+            e.preventDefault();
+            runCode();
+        }
+    });
+    // Tab insere espaços
+    document.getElementById('code').addEventListener('keydown', (e) => {
+        if (e.key === 'Tab') {
+            e.preventDefault();
+            const ta = e.target;
+            const start = ta.selectionStart;
+            const end = ta.selectionEnd;
+            ta.value = ta.value.substring(0, start) + '    ' + ta.value.substring(end);
+            ta.selectionStart = ta.selectionEnd = start + 4;
+        }
+    });
+}
+
+// ========================================================================
+// SESSÃO
+// ========================================================================
+async function checkSession() {
+    try {
+        const r = await fetch('/session/info', { credentials: 'include' });
+        const d = await r.json();
+        if (d.ok) {
+            sessionInfo = d;
+            updateSessionBadge();
+        } else {
+            updateSessionBadge(true);
+        }
+    } catch {
+        updateSessionBadge(true);
+    }
+}
+
+function updateSessionBadge(error = false) {
+    const badge = document.getElementById('session-badge');
+    const text = document.getElementById('session-text');
+    if (error) {
+        badge.className = 'badge error';
+        text.textContent = 'Desconectado';
+        return;
+    }
+    if (sessionInfo) {
+        badge.className = 'badge';
+        const vars = sessionInfo.vars_count || 0;
+        text.textContent = `${vars} variável${vars === 1 ? '' : 'is'}`;
+    }
+}
+
+// ========================================================================
+// EXECUÇÃO
+// ========================================================================
+async function runCode() {
+    if (isRunning) return;
+
+    const code = document.getElementById('code').value.trim();
+    if (!code) {
+        showToast('Digite algum código antes de executar', 'error');
+        return;
+    }
+
+    const btn = document.getElementById('btn-run');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span> Executando...';
+    isRunning = true;
+
+    const startTime = performance.now();
+
+    try {
+        const resp = await fetch(API, {
+            method: 'POST',
+            credentials: 'include',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ code }),
+        });
+
+        if (resp.status === 429) {
+            throw new Error('Rate limit excedido. Aguarde um minuto.');
+        }
+        if (resp.status === 401) {
+            throw new Error('Sessão expirada. Recarregue a página.');
+        }
+        if (!resp.ok) {
+            throw new Error(`HTTP ${resp.status}`);
+        }
+
+        const data = await resp.json();
+        const duration = Math.round(performance.now() - startTime);
+
+        addEntry(code, data, duration);
+        await checkSession();
+
+    } catch (e) {
+        const duration = Math.round(performance.now() - startTime);
+        addEntry(code, {
+            ok: false,
+            output: '',
+            error: e.message
+        }, duration);
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = '▶️ Executar';
+        isRunning = false;
+    }
+}
+
+function addEntry(code, data, duration) {
+    const output = document.getElementById('output');
+    const entry = document.createElement('div');
+    entry.className = 'entry';
+
+    const status = data.ok
+        ? '<span class="status ok">✅ Sucesso</span>'
+        : '<span class="status err">❌ Erro</span>';
+
+    const outputContent = data.ok
+        ? escapeHtml(data.output || '(sem saída)')
+        : escapeHtml(data.error || 'Erro desconhecido');
+
+    const outputClass = data.ok ? '' : 'error';
+
+    entry.innerHTML = `
+        <div class="entry-header">
+            ${status}
+            <span class="duration">${duration}ms</span>
+        </div>
+        <div class="entry-code">${escapeHtml(truncateCode(code))}</div>
+        <div class="entry-output ${outputClass}">${outputContent}</div>
+    `;
+
+    output.appendChild(entry);
+    output.scrollTop = output.scrollHeight;
+}
+
+function truncateCode(code) {
+    if (code.length > 300) {
+        return code.substring(0, 300) + '\n... (truncado)';
+    }
+    return code;
+}
+
+// ========================================================================
+// RESET
+// ========================================================================
+function showResetModal() {
+    document.getElementById('reset-modal').classList.add('active');
+}
+
+function hideResetModal() {
+    document.getElementById('reset-modal').classList.remove('active');
+}
+
+async function doReset() {
+    hideResetModal();
+    try {
+        const r = await fetch('/session/reset', {
+            method: 'POST',
+            credentials: 'include'
+        });
+        const d = await r.json();
+        if (d.ok) {
+            sessionInfo = null;
+            updateSessionBadge();
+            showToast('Sessão resetada', 'success');
+            clearOutput();
+        } else {
+            showToast('Erro ao resetar: ' + (d.error || 'desconhecido'), 'error');
+        }
+    } catch (e) {
+        showToast('Erro de rede: ' + e.message, 'error');
+    }
+}
+
+// ========================================================================
+// LIMPAR
+// ========================================================================
+function clearEditor() {
+    document.getElementById('code').value = '';
+    document.getElementById('code').focus();
+}
+
+function clearOutput() {
+    document.getElementById('output').innerHTML = '';
+}
+
+// ========================================================================
+// UTILS
+// ========================================================================
+function escapeHtml(s) {
+    return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
+function showToast(msg, type = 'info') {
+    const el = document.getElementById('toast');
+    el.textContent = msg;
+    el.className = `toast ${type} show`;
+    clearTimeout(el._t);
+    el._t = setTimeout(() => el.classList.remove('show'), 3000);
+}
+
+// Fechar modal ao clicar fora
+document.getElementById('reset-modal').addEventListener('click', (e) => {
+    if (e.target.id === 'reset-modal') hideResetModal();
+});
+
+// ESC fecha modal
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') hideResetModal();
+});
+
+// Inicia
+init();
+</script>
+
+</body>
+</html>

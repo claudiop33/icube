@@ -1,0 +1,1217 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Documentação — Icube v0.8.0</title>
+<meta name="description" content="Documentação completa da linguagem Icube v0.8.0: sintaxe, tipos, structs, métodos, banco de dados, IA e servidor web.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🐣</text></svg>">
+<style>
+:root {
+  --primary: #1976d2;
+  --primary-light: #42a5f5;
+  --accent: #a78bfa;
+  --cyan: #22d3ee;
+  --bg: #0a0e14;
+  --bg-alt: #0d1117;
+  --bg-card: #161b22;
+  --text: #e6edf3;
+  --text-muted: #8b949e;
+  --border: #21262d;
+  --border-strong: #30363d;
+  --success: #3fb950;
+  --warning: #d29922;
+  --danger: #f85149;
+  --mono: 'JetBrains Mono', 'Fira Code', 'SF Mono', Consolas, monospace;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html { scroll-behavior: smooth; scroll-padding-top: 80px; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.7;
+  -webkit-font-smoothing: antialiased;
+}
+a { color: var(--primary-light); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+/* HEADER */
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: rgba(10, 14, 20, 0.9);
+  backdrop-filter: blur(16px);
+  border-bottom: 1px solid var(--border);
+  padding: 12px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+.topbar-left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+.topbar-left a.back {
+  color: var(--text-muted);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.9rem;
+  padding: 6px 12px;
+  border-radius: 6px;
+  transition: all 0.15s;
+}
+.topbar-left a.back:hover { background: var(--bg-card); color: var(--text); text-decoration: none; }
+.brand { font-size: 1.15rem; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+.brand .version { color: var(--primary-light); font-size: 0.85rem; font-weight: 600; }
+.topbar-right { display: flex; gap: 8px; }
+.topbar-right a {
+  background: var(--bg-card);
+  border: 1px solid var(--border-strong);
+  color: var(--text) !important;
+  padding: 6px 14px;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.topbar-right a:hover { background: #1c2128; text-decoration: none; }
+
+/* LAYOUT */
+.layout {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  max-width: 1400px;
+  margin: 0 auto;
+  gap: 40px;
+  padding: 40px 24px;
+}
+
+/* SIDEBAR */
+.sidebar {
+  position: sticky;
+  top: 80px;
+  height: calc(100vh - 100px);
+  overflow-y: auto;
+  padding-right: 16px;
+  border-right: 1px solid var(--border);
+}
+.sidebar h4 {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  color: var(--text-muted);
+  margin: 24px 0 10px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--border);
+}
+.sidebar h4:first-child { margin-top: 0; }
+.sidebar nav { display: flex; flex-direction: column; gap: 2px; }
+.sidebar nav a {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  padding: 6px 10px;
+  border-radius: 5px;
+  transition: all 0.15s;
+}
+.sidebar nav a:hover { background: var(--bg-card); color: var(--text); text-decoration: none; }
+.sidebar nav a.active { background: rgba(25, 118, 210, 0.15); color: var(--primary-light); font-weight: 600; }
+
+/* CONTENT */
+.content { min-width: 0; max-width: 900px; }
+.content h1 {
+  font-size: clamp(2rem, 5vw, 2.8rem);
+  font-weight: 800;
+  margin-bottom: 16px;
+  letter-spacing: -1px;
+}
+.content h1 .accent {
+  background: linear-gradient(135deg, #42a5f5, #a78bfa, #22d3ee);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+.content .lead {
+  color: var(--text-muted);
+  font-size: 1.15rem;
+  margin-bottom: 48px;
+  max-width: 700px;
+}
+.content h2 {
+  font-size: 1.9rem;
+  font-weight: 700;
+  margin: 64px 0 20px;
+  padding-bottom: 12px;
+  border-bottom: 2px solid var(--primary);
+  letter-spacing: -0.5px;
+  scroll-margin-top: 80px;
+}
+.content h3 {
+  font-size: 1.3rem;
+  font-weight: 700;
+  margin: 32px 0 12px;
+  color: var(--text);
+  scroll-margin-top: 80px;
+}
+.content h3::before {
+  content: '▸ ';
+  color: var(--primary-light);
+  margin-right: 4px;
+}
+.content h4 {
+  font-size: 1.05rem;
+  font-weight: 700;
+  margin: 24px 0 10px;
+  color: var(--primary-light);
+}
+.content p { color: var(--text-muted); margin-bottom: 16px; }
+.content p strong { color: var(--text); }
+.content ul, .content ol { color: var(--text-muted); margin: 12px 0 20px 24px; }
+.content ul li, .content ol li { margin-bottom: 8px; }
+.content code {
+  background: rgba(25, 118, 210, 0.12);
+  padding: 2px 7px;
+  border-radius: 5px;
+  font-family: var(--mono);
+  font-size: 0.88em;
+  color: var(--primary-light);
+}
+.content pre {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--primary);
+  border-radius: 8px;
+  padding: 18px 22px;
+  overflow-x: auto;
+  margin: 16px 0 24px;
+  font-family: var(--mono);
+  font-size: 0.88rem;
+  line-height: 1.65;
+}
+.content pre code {
+  background: none;
+  padding: 0;
+  color: var(--text);
+  font-size: inherit;
+}
+.content pre .cm { color: #6e7681; font-style: italic; }
+.content pre .kw { color: #ff7b72; font-weight: 500; }
+.content pre .str { color: #a5d6ff; }
+.content pre .fn { color: #d2a8ff; }
+.content pre .num { color: #79c0ff; }
+
+.content table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 16px 0 24px;
+  font-size: 0.92rem;
+}
+.content table th {
+  background: var(--bg-card);
+  color: var(--text);
+  padding: 11px 14px;
+  text-align: left;
+  border-bottom: 2px solid var(--border-strong);
+  font-weight: 600;
+}
+.content table td {
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+  color: var(--text-muted);
+}
+.content table tr:hover td { background: rgba(25, 118, 210, 0.04); }
+.content table code { font-size: 0.85em; }
+
+.info-box, .warn-box, .danger-box, .success-box {
+  padding: 14px 20px;
+  border-radius: 8px;
+  margin: 18px 0;
+  font-size: 0.95rem;
+}
+.info-box { background: rgba(25, 118, 210, 0.08); border-left: 4px solid var(--primary); }
+.warn-box { background: rgba(210, 153, 34, 0.08); border-left: 4px solid var(--warning); }
+.danger-box { background: rgba(248, 81, 73, 0.08); border-left: 4px solid var(--danger); }
+.success-box { background: rgba(63, 185, 80, 0.08); border-left: 4px solid var(--success); }
+.info-box strong, .warn-box strong, .danger-box strong, .success-box strong { color: var(--text); }
+
+/* FOOTER */
+footer {
+  padding: 60px 24px 40px;
+  border-top: 1px solid var(--border);
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 0.88rem;
+  margin-top: 80px;
+}
+footer strong { color: var(--text); }
+
+/* RESPONSIVE */
+@media (max-width: 900px) {
+  .layout { grid-template-columns: 1fr; gap: 16px; padding: 20px 16px; }
+  .sidebar {
+    position: static;
+    height: auto;
+    max-height: none;
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 20px;
+    padding-right: 0;
+  }
+  .sidebar nav { flex-direction: row; flex-wrap: wrap; gap: 6px; }
+  .sidebar h4 { margin-top: 12px; }
+}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="topbar-left">
+    <a href="index.html" class="back">← Voltar ao site</a>
+    <div class="brand">🐣 Icube <span class="version">v0.8.0</span></div>
+  </div>
+  <div class="topbar-right">
+    <a href="https://github.com/claudiop33/icube" target="_blank" rel="noopener">GitHub</a>
+    <a href="tutorial.html">🎓 Tutorial</a>
+  </div>
+</header>
+
+<div class="layout">
+
+  <aside class="sidebar">
+    <h4>Começando</h4>
+    <nav>
+      <a href="#visao">Visão Geral</a>
+      <a href="#instalacao">Instalação</a>
+      <a href="#primeiros">Primeiros Passos</a>
+    </nav>
+
+    <h4>Linguagem</h4>
+    <nav>
+      <a href="#sintaxe">Sintaxe Básica</a>
+      <a href="#tipos">Tipos</a>
+      <a href="#operadores">Operadores</a>
+      <a href="#controle">Controle de Fluxo</a>
+      <a href="#funcoes">Funções</a>
+      <a href="#structs">Structs e Métodos</a>
+      <a href="#arrays">Arrays</a>
+      <a href="#erros">Tratamento de Erros</a>
+    </nav>
+
+    <h4>Built-ins</h4>
+    <nav>
+      <a href="#builtins">Funções Nativas</a>
+      <a href="#exec">exec() e exec_run()</a>
+    </nav>
+
+    <h4>Banco de Dados</h4>
+    <nav>
+      <a href="#banco">Conectar e Consultar</a>
+      <a href="#transacoes">Transações</a>
+      <a href="#decimal">Decimal</a>
+      <a href="#datas">Datas e Tempo</a>
+    </nav>
+
+    <h4>IA</h4>
+    <nav>
+      <a href="#ia">Integração com Ollama</a>
+    </nav>
+
+    <h4>Servidor Web</h4>
+    <nav>
+      <a href="#servidor">Servidor HTTP/HTTPS</a>
+      <a href="#auth">Autenticação</a>
+      <a href="#seguranca">Segurança</a>
+    </nav>
+
+    <h4>Recursos</h4>
+    <nav>
+      <a href="#limitacoes">Limitações</a>
+      <a href="#roadmap">Roadmap</a>
+      <a href="#changelog">Changelog</a>
+    </nav>
+  </aside>
+
+  <main class="content">
+
+    <h1>Documentação <span class="accent">Icube v0.8.0</span></h1>
+    <p class="lead">Linguagem de script estaticamente tipada com banco de dados, decimal, IA e structs embutidos. Roda em Linux e Windows. Feita para automatizar negócios.</p>
+
+    <!-- ============================================================ -->
+    <h2 id="visao">1. Visão Geral</h2>
+
+    <p>Icube é uma linguagem de script com <strong>banco de dados</strong>, <strong>decimal nativo</strong>, <strong>IA local</strong> e <strong>structs com métodos</strong> embutidos. Um único binário entrega tudo.</p>
+
+    <h3>Princípios de Design</h3>
+    <table>
+      <tr><th>Princípio</th><th>Descrição</th></tr>
+      <tr><td>Simplicidade</td><td>Sintaxe minimalista, sem ambiguidade</td></tr>
+      <tr><td>Segurança de tipos</td><td>Erros detectados antes da execução</td></tr>
+      <tr><td>Segurança SQL</td><td>Parâmetros vinculados previnem injection</td></tr>
+      <tr><td>Precisão monetária</td><td>Tipo <code>decimal</code> nativo (28 dígitos)</td></tr>
+      <tr><td>Nulidade explícita</td><td>Propagação estilo SQL (<code>null + 1 = null</code>)</td></tr>
+      <tr><td>OOP mínima</td><td>Structs + métodos, sem herança</td></tr>
+      <tr><td>IA local</td><td>Integração com Ollama, sem enviar dados</td></tr>
+    </table>
+
+    <h3>Pipeline de execução</h3>
+    <pre><code>Script .icb
+    ↓
+Lexer → Tokens
+    ↓
+Parser → AST
+    ↓
+TypeChecker → valida
+    ↓
+Evaluator → executa
+    ↓
+PostgreSQL / MySQL + Ollama + stdout</code></pre>
+
+    <h3>Estado atual</h3>
+    <table>
+      <tr><th>Componente</th><th>Status</th></tr>
+      <tr><td>Pipeline completo</td><td>✅</td></tr>
+      <tr><td>PostgreSQL + MySQL</td><td>✅</td></tr>
+      <tr><td>Tipos primitivos + date/time/datetime</td><td>✅</td></tr>
+      <tr><td>Decimal (NUMERIC)</td><td>✅</td></tr>
+      <tr><td>Structs + métodos</td><td>✅ (v0.8.0)</td></tr>
+      <tr><td>exec() / exec_run()</td><td>✅ (v0.7.8)</td></tr>
+      <tr><td>try/catch/finally + throw</td><td>✅</td></tr>
+      <tr><td>Transações</td><td>✅</td></tr>
+      <tr><td>IA (Ollama)</td><td>✅</td></tr>
+      <tr><td>Servidor web + TLS + auth</td><td>✅</td></tr>
+      <tr><td>REPL stateful</td><td>✅</td></tr>
+      <tr><td>Playground interativo</td><td>✅</td></tr>
+    </table>
+
+    <!-- ============================================================ -->
+    <h2 id="instalacao">2. Instalação</h2>
+
+    <h3>Pré-requisitos</h3>
+    <ul>
+      <li><strong>Rust 1.75+</strong> (instale via <a href="https://rustup.rs" target="_blank" rel="noopener">rustup.rs</a>)</li>
+      <li><strong>PostgreSQL 14+</strong> e/ou <strong>MySQL 8+</strong> (opcional)</li>
+      <li><strong>Ollama</strong> (opcional, para IA)</li>
+    </ul>
+
+    <h3>Linux</h3>
+    <pre><code><span class="cm"># Dependências do sistema</span>
+apt install -y build-essential pkg-config libssl-dev
+
+<span class="cm"># Clonar e compilar</span>
+git clone https://github.com/claudiop33/icube.git
+cd icube
+cargo build --release
+
+<span class="cm"># Verificar</span>
+./target/release/icube --version
+<span class="cm"># icube 0.8.0</span></code></pre>
+
+    <h3>Windows</h3>
+    <pre><code>git clone https://github.com/claudiop33/icube.git
+cd icube
+cargo build --release
+
+.\target\release\icube.exe --version
+<span class="cm"># icube 0.8.0</span></code></pre>
+
+    <h3>Ollama (opcional)</h3>
+    <pre><code>curl -fsSL https://ollama.com/install.sh | sh
+ollama serve &amp;
+ollama pull llama3</code></pre>
+
+    <!-- ============================================================ -->
+    <h2 id="primeiros">3. Primeiros Passos</h2>
+
+    <h3>Hello World</h3>
+    <pre><code><span class="cm">// hello.icb</span>
+<span class="fn">print</span>(<span class="str">"Olá, mundo!"</span>);</code></pre>
+    <pre><code>./target/release/icube hello.icb
+<span class="cm"># Olá, mundo!</span></code></pre>
+
+    <h3>REPL interativo</h3>
+    <pre><code>./target/release/icube
+icube&gt; <span class="kw">let</span> x = <span class="num">42</span>
+icube&gt; <span class="fn">print</span>(x * <span class="num">2</span>)
+84
+icube&gt; exit</code></pre>
+
+    <div class="info-box">
+      <strong>Dica:</strong> no REPL, o <code>;</code> é opcional (adicionado automaticamente). Variáveis, structs e funções persistem entre linhas.
+    </div>
+
+    <h3>Comentários</h3>
+    <pre><code><span class="cm">// Comentário de linha</span>
+<span class="kw">let</span> x = <span class="num">42</span>;  <span class="cm">// também no fim da linha</span></code></pre>
+
+    <!-- ============================================================ -->
+    <h2 id="sintaxe">4. Sintaxe Básica</h2>
+
+    <h3>Variáveis</h3>
+    <pre><code><span class="kw">let</span> nome = <span class="str">"Ana"</span>;                <span class="cm">// string (inferido)</span>
+<span class="kw">let</span> idade = <span class="num">30</span>;                  <span class="cm">// int</span>
+<span class="kw">let</span> altura: float = <span class="num">1.65</span>;        <span class="cm">// float</span>
+<span class="kw">let</span> salario: decimal = <span class="num">5000.00</span>;  <span class="cm">// decimal</span>
+<span class="kw">let</span> ativo: bool = <span class="kw">true</span>;          <span class="cm">// bool</span>
+<span class="kw">let</span> apelido: string? = <span class="kw">null</span>;     <span class="cm">// nullable</span></code></pre>
+
+    <h3>Palavras-chave</h3>
+    <p><code>let</code>, <code>fn</code>, <code>if</code>, <code>else</code>, <code>while</code>, <code>for</code>, <code>in</code>, <code>break</code>, <code>continue</code>, <code>return</code>, <code>try</code>, <code>catch</code>, <code>finally</code>, <code>throw</code>, <code>as</code>, <code>struct</code>, <code>self</code>, <code>true</code>, <code>false</code>, <code>null</code></p>
+
+    <h3>Literais</h3>
+    <table>
+      <tr><th>Tipo</th><th>Exemplo</th></tr>
+      <tr><td>Inteiro</td><td><code>42</code>, <code>-17</code></td></tr>
+      <tr><td>Float</td><td><code>3.14</code>, <code>2.0</code></td></tr>
+      <tr><td>String</td><td><code>"olá"</code>, <code>"linha\n"</code></td></tr>
+      <tr><td>Bool</td><td><code>true</code>, <code>false</code></td></tr>
+      <tr><td>Null</td><td><code>null</code></td></tr>
+      <tr><td>Array</td><td><code>[1, 2, 3]</code></td></tr>
+    </table>
+
+    <p><strong>Escapes:</strong> <code>\n</code>, <code>\t</code>, <code>\"</code>, <code>\\</code></p>
+
+    <!-- ============================================================ -->
+    <h2 id="tipos">5. Tipos</h2>
+
+    <h3>Primitivos</h3>
+    <table>
+      <tr><th>Icube</th><th>SQL</th><th>Exemplo</th></tr>
+      <tr><td><code>int</code></td><td>INTEGER, BIGINT</td><td><code>let x: int = 42;</code></td></tr>
+      <tr><td><code>float</code></td><td>REAL, DOUBLE</td><td><code>let pi: float = 3.14;</code></td></tr>
+      <tr><td><code>decimal</code></td><td>NUMERIC, DECIMAL</td><td><code>let p: decimal = 1234.56;</code></td></tr>
+      <tr><td><code>bool</code></td><td>BOOLEAN</td><td><code>let ok: bool = true;</code></td></tr>
+      <tr><td><code>string</code></td><td>TEXT, VARCHAR</td><td><code>let s: string = "oi";</code></td></tr>
+    </table>
+
+    <h3>Data e Tempo</h3>
+    <table>
+      <tr><th>Tipo</th><th>Exemplo</th></tr>
+      <tr><td><code>date</code></td><td><code>"2026-01-15" as date</code></td></tr>
+      <tr><td><code>time</code></td><td><code>"14:30:00" as time</code></td></tr>
+      <tr><td><code>datetime</code></td><td><code>now()</code></td></tr>
+    </table>
+
+    <h3>Nulidade</h3>
+    <p>Qualquer tipo <code>T</code> pode ser <code>T?</code>:</p>
+    <pre><code><span class="kw">let</span> nome: string = <span class="str">"Ana"</span>;
+<span class="kw">let</span> apelido: string? = <span class="kw">null</span>;
+
+<span class="kw">let</span> x: int = <span class="num">5</span>;
+x = <span class="kw">null</span>;  <span class="cm">// ERRO de tipo</span></code></pre>
+
+    <h3>Cast</h3>
+    <pre><code><span class="num">3.9</span> <span class="kw">as</span> int              <span class="cm">// 3</span>
+<span class="num">42</span> <span class="kw">as</span> float             <span class="cm">// 42.0</span>
+<span class="num">42</span> <span class="kw">as</span> string            <span class="cm">// "42"</span>
+<span class="num">1234.56</span> <span class="kw">as</span> decimal      <span class="cm">// decimal</span>
+<span class="str">"2026-01-15"</span> <span class="kw">as</span> date</code></pre>
+
+    <div class="success-box">
+      <strong>Cast implícito:</strong> <code>int</code> e <code>float</code> são convertidos para <code>decimal</code> automaticamente em atribuições, campos de struct e argumentos de função.
+    </div>
+
+    <!-- ============================================================ -->
+    <h2 id="operadores">6. Operadores</h2>
+
+    <h3>Aritméticos</h3>
+    <pre><code><span class="num">10</span> + <span class="num">5</span>      <span class="cm">// 15</span>
+<span class="num">10</span> - <span class="num">5</span>      <span class="cm">// 5</span>
+<span class="num">10</span> * <span class="num">5</span>      <span class="cm">// 50</span>
+<span class="num">10</span> / <span class="num">5</span>      <span class="cm">// 2</span>
+<span class="num">10</span> % <span class="num">3</span>      <span class="cm">// 1</span></code></pre>
+
+    <h3>Comparação e Lógicos</h3>
+    <pre><code><span class="num">5</span> == <span class="num">5</span>         <span class="cm">// true</span>
+<span class="num">5</span> != <span class="num">3</span>         <span class="cm">// true</span>
+<span class="num">5</span> &gt; <span class="num">3</span>          <span class="cm">// true</span>
+<span class="kw">true</span> &amp;&amp; <span class="kw">false</span>   <span class="cm">// false</span>
+<span class="kw">true</span> || <span class="kw">false</span>   <span class="cm">// true</span>
+!<span class="kw">true</span>              <span class="cm">// false</span></code></pre>
+
+    <h3>Precedência (menor → maior)</h3>
+    <p><code>||</code> → <code>&amp;&amp;</code> → <code>== !=</code> → <code>&lt; &lt;= &gt; &gt;=</code> → <code>+ -</code> → <code>* / %</code> → <code>- !</code> (unário) → <code>() [] as</code></p>
+
+    <!-- ============================================================ -->
+    <h2 id="controle">7. Controle de Fluxo</h2>
+
+    <h3>if / else</h3>
+    <pre><code><span class="kw">if</span> idade &gt;= <span class="num">18</span> {
+    <span class="fn">print</span>(<span class="str">"Maior"</span>);
+} <span class="kw">else if</span> idade &gt;= <span class="num">12</span> {
+    <span class="fn">print</span>(<span class="str">"Adolescente"</span>);
+} <span class="kw">else</span> {
+    <span class="fn">print</span>(<span class="str">"Criança"</span>);
+}</code></pre>
+    <div class="info-box">A condição <strong>precisa ser bool</strong>. Não aceita <code>int</code> como em C.</div>
+
+    <h3>while / for</h3>
+    <pre><code><span class="kw">let</span> i = <span class="num">0</span>;
+<span class="kw">while</span> i &lt; <span class="num">5</span> {
+    <span class="fn">print</span>(i);
+    i = i + <span class="num">1</span>;
+}
+
+<span class="kw">for</span> n <span class="kw">in</span> [<span class="num">1</span>, <span class="num">2</span>, <span class="num">3</span>] {
+    <span class="fn">print</span>(n);
+}</code></pre>
+
+    <h3>break / continue</h3>
+    <pre><code><span class="kw">for</span> n <span class="kw">in</span> [<span class="num">1</span>, <span class="num">2</span>, <span class="num">3</span>, <span class="num">4</span>, <span class="num">5</span>] {
+    <span class="kw">if</span> n == <span class="num">3</span> { <span class="kw">break</span>; }
+    <span class="kw">if</span> n % <span class="num">2</span> == <span class="num">0</span> { <span class="kw">continue</span>; }
+    <span class="fn">print</span>(n);
+}
+<span class="cm">// 1</span></code></pre>
+
+    <!-- ============================================================ -->
+    <h2 id="funcoes">8. Funções</h2>
+
+    <pre><code><span class="kw">fn</span> <span class="fn">saudar</span>(nome: string) {
+    <span class="fn">print</span>(<span class="str">"Olá,"</span>, nome);
+}
+
+<span class="kw">fn</span> <span class="fn">dobro</span>(n: int) -&gt; int {
+    <span class="kw">return</span> n * <span class="num">2</span>;
+}
+
+<span class="kw">fn</span> <span class="fn">calcular_total</span>(preco: decimal, qtd: int) -&gt; decimal {
+    <span class="kw">return</span> preco * qtd;
+}</code></pre>
+
+    <div class="warn-box">
+      <strong>Escopo isolado:</strong> funções não enxergam variáveis externas. Passe por parâmetro.
+    </div>
+
+    <h3>Recursão</h3>
+    <pre><code><span class="kw">fn</span> <span class="fn">fatorial</span>(n: int) -&gt; int {
+    <span class="kw">if</span> n &lt;= <span class="num">1</span> { <span class="kw">return</span> <span class="num">1</span>; }
+    <span class="kw">return</span> n * <span class="fn">fatorial</span>(n - <span class="num">1</span>);
+}</code></pre>
+
+    <h3>Chamar antes de declarar</h3>
+    <pre><code><span class="fn">print</span>(<span class="fn">quadrado</span>(<span class="num">5</span>));  <span class="cm">// funciona</span>
+
+<span class="kw">fn</span> <span class="fn">quadrado</span>(n: int) -&gt; int {
+    <span class="kw">return</span> n * n;
+}</code></pre>
+
+    <!-- ============================================================ -->
+    <h2 id="structs">9. Structs e Métodos 🆕</h2>
+
+    <div class="success-box">
+      <strong>Novo em v0.8.0.</strong> Tipos definidos pelo usuário com schema validado e métodos.
+    </div>
+
+    <h3>Declarar struct</h3>
+    <pre><code><span class="kw">struct</span> Ponto {
+    x: int,
+    y: int,
+}
+
+<span class="kw">struct</span> Cliente {
+    nome: string,
+    idade: int,
+    saldo: decimal,
+}</code></pre>
+
+    <h3>Criar instância</h3>
+    <pre><code><span class="kw">let</span> p = Ponto { x: <span class="num">10</span>, y: <span class="num">20</span> };
+<span class="fn">print</span>(p.x);      <span class="cm">// 10</span>
+<span class="fn">print</span>(p.y);      <span class="cm">// 20</span></code></pre>
+
+    <div class="warn-box">
+      <strong>Validação:</strong> todos os campos devem ser informados, e o tipo de cada campo é verificado em compilação.
+    </div>
+
+    <h3>Métodos</h3>
+    <pre><code><span class="kw">fn</span> Cliente.<span class="fn">maior_idade</span>(<span class="kw">self</span>) -&gt; bool {
+    <span class="kw">return</span> <span class="kw">self</span>.idade &gt;= <span class="num">18</span>;
+}
+
+<span class="kw">fn</span> Cliente.<span class="fn">aplicar_bonus</span>(<span class="kw">self</span>, pct: int) -&gt; decimal {
+    <span class="kw">return</span> <span class="kw">self</span>.saldo * (<span class="num">100</span> + pct) / <span class="num">100</span>;
+}</code></pre>
+
+    <p>O <code>self</code> é implícito com o tipo da struct — não precisa declarar <code>self: Cliente</code>.</p>
+
+    <h3>Chamar métodos</h3>
+    <pre><code><span class="kw">let</span> ana = Cliente { nome: <span class="str">"Ana"</span>, idade: <span class="num">30</span>, saldo: <span class="num">1500.00</span> };
+
+<span class="kw">if</span> ana.<span class="fn">maior_idade</span>() {
+    <span class="fn">print</span>(ana.nome, <span class="str">"tem bônus de"</span>, ana.<span class="fn">aplicar_bonus</span>(<span class="num">10</span>));
+}
+<span class="cm">// Ana tem bônus de 1650</span></code></pre>
+
+    <h3>Métodos chamando métodos</h3>
+    <pre><code><span class="kw">struct</span> Conta {
+    saldo: decimal,
+}
+
+<span class="kw">fn</span> Conta.<span class="fn">tem_saldo</span>(<span class="kw">self</span>) -&gt; bool {
+    <span class="kw">return</span> <span class="kw">self</span>.saldo &gt; <span class="num">0</span>;
+}
+
+<span class="kw">fn</span> Conta.<span class="fn">sacar</span>(<span class="kw">self</span>, valor: decimal) -&gt; decimal {
+    <span class="kw">if</span> !<span class="kw">self</span>.<span class="fn">tem_saldo</span>() {
+        <span class="kw">throw</span> <span class="str">"sem saldo"</span>;
+    }
+    <span class="kw">return</span> <span class="kw">self</span>.saldo - valor;
+}</code></pre>
+
+    <h3>Tipos aninhados</h3>
+    <pre><code><span class="kw">struct</span> Endereco {
+    rua: string,
+    cidade: string,
+}
+
+<span class="kw">struct</span> Cliente {
+    nome: string,
+    endereco: Endereco,
+}
+
+<span class="kw">let</span> c = Cliente {
+    nome: <span class="str">"Ana"</span>,
+    endereco: Endereco { rua: <span class="str">"Rua A"</span>, cidade: <span class="str">"SP"</span> },
+};
+
+<span class="fn">print</span>(c.endereco.cidade);  <span class="cm">// SP</span></code></pre>
+
+    <h3>Duck typing (sem herança)</h3>
+    <p>Basta que o método exista:</p>
+    <pre><code><span class="kw">struct</span> Cliente { saldo: decimal }
+<span class="kw">struct</span> Fornecedor { saldo: decimal }
+
+<span class="kw">fn</span> Cliente.<span class="fn">credito</span>(<span class="kw">self</span>) -&gt; decimal {
+    <span class="kw">return</span> <span class="kw">self</span>.saldo * <span class="num">1.2</span>;
+}
+
+<span class="kw">fn</span> Fornecedor.<span class="fn">credito</span>(<span class="kw">self</span>) -&gt; decimal {
+    <span class="kw">return</span> <span class="kw">self</span>.saldo * <span class="num">0.9</span>;
+}
+
+<span class="kw">fn</span> <span class="fn">processar</span>(entidade, valor: decimal) {
+    <span class="kw">if</span> entidade.<span class="fn">credito</span>() &gt;= valor {
+        <span class="fn">print</span>(<span class="str">"Aprovado"</span>);
+    }
+}</code></pre>
+
+    <h3>O que NÃO tem (por design)</h3>
+    <ul>
+      <li>❌ Herança (<code>extends</code>)</li>
+      <li>❌ Interfaces (<code>interface</code>)</li>
+      <li>❌ Polimorfismo via tipos</li>
+      <li>❌ Getters/setters mágicos</li>
+      <li>❌ Construtores</li>
+    </ul>
+    <p>Duck typing cobre a maioria dos casos de polimorfismo. Menos complexidade, mais produtividade.</p>
+
+    <!-- ============================================================ -->
+    <h2 id="arrays">10. Arrays e Listas</h2>
+
+    <pre><code><span class="kw">let</span> vazio = [];
+<span class="kw">let</span> numeros = [<span class="num">1</span>, <span class="num">2</span>, <span class="num">3</span>, <span class="num">4</span>, <span class="num">5</span>];
+<span class="kw">let</span> frutas = [<span class="str">"maçã"</span>, <span class="str">"banana"</span>, <span class="str">"uva"</span>];
+
+<span class="fn">print</span>(frutas[<span class="num">0</span>]);       <span class="cm">// maçã</span>
+<span class="fn">print</span>(<span class="fn">len</span>(frutas));    <span class="cm">// 3</span>
+
+<span class="kw">for</span> f <span class="kw">in</span> frutas {
+    <span class="fn">print</span>(f);
+}</code></pre>
+
+    <h3>Array de Rows (resultado de query)</h3>
+    <pre><code><span class="kw">let</span> usuarios = <span class="fn">db.query</span>(<span class="str">"SELECT nome, idade FROM usuarios"</span>);
+<span class="kw">for</span> u <span class="kw">in</span> usuarios {
+    <span class="fn">print</span>(u[<span class="str">"nome"</span>], <span class="str">"-"</span>, u[<span class="str">"idade"</span>]);
+}</code></pre>
+
+    <!-- ============================================================ -->
+    <h2 id="erros">11. Tratamento de Erros</h2>
+
+    <h3>try / catch / finally</h3>
+    <pre><code><span class="kw">try</span> {
+    <span class="kw">let</span> r = <span class="num">10</span> / <span class="num">0</span>;
+} <span class="kw">catch</span> e {
+    <span class="fn">print</span>(<span class="str">"Erro:"</span>, e);
+} <span class="kw">finally</span> {
+    <span class="fn">print</span>(<span class="str">"sempre executa"</span>);
+}</code></pre>
+
+    <p><code>e</code> é sempre uma string.</p>
+
+    <h3>throw</h3>
+    <pre><code><span class="kw">if</span> idade &lt; <span class="num">0</span> {
+    <span class="kw">throw</span> <span class="str">"Idade não pode ser negativa"</span>;
+}</code></pre>
+
+    <h3>Re-lançar</h3>
+    <pre><code><span class="kw">try</span> {
+    <span class="cm">// algo que pode falhar</span>
+} <span class="kw">catch</span> e {
+    <span class="fn">print</span>(<span class="str">"[log]"</span>, e);
+    <span class="kw">throw</span> e;
+}</code></pre>
+
+    <h3>O que NÃO é capturável</h3>
+    <table>
+      <tr><th>Erro</th><th>Capturável?</th></tr>
+      <tr><td>Léxico / sintático</td><td>❌</td></tr>
+      <tr><td>Tipo</td><td>❌</td></tr>
+      <tr><td>Runtime</td><td>✅</td></tr>
+      <tr><td><code>exit()</code></td><td>❌</td></tr>
+    </table>
+
+    <!-- ============================================================ -->
+    <h2 id="builtins">12. Built-ins</h2>
+
+    <table>
+      <tr><th>Função</th><th>Retorno</th><th>Descrição</th></tr>
+      <tr><td><code>print(...)</code></td><td>—</td><td>Imprime valores separados por espaço</td></tr>
+      <tr><td><code>len(x)</code></td><td>int</td><td>Tamanho de string ou lista</td></tr>
+      <tr><td><code>env("VAR")</code></td><td>string?</td><td>Variável de ambiente (ou null)</td></tr>
+      <tr><td><code>exit(code)</code></td><td>—</td><td>Encerra o processo (não capturável)</td></tr>
+      <tr><td><code>today()</code></td><td>date</td><td>Data atual</td></tr>
+      <tr><td><code>now()</code></td><td>datetime</td><td>Data/hora atual (UTC)</td></tr>
+      <tr><td><code>exec(cmd)</code></td><td>string</td><td>Executa comando, retorna stdout 🆕</td></tr>
+      <tr><td><code>exec_run(cmd)</code></td><td>int</td><td>Executa sem capturar, retorna exit code 🆕</td></tr>
+    </table>
+
+    <!-- ============================================================ -->
+    <h2 id="exec">13. exec() e exec_run() 🆕</h2>
+
+    <div class="success-box">
+      <strong>Novo em v0.7.8.</strong> Execute comandos externos e scripts shell.
+    </div>
+
+    <h3>exec(cmd) — captura saída</h3>
+    <pre><code><span class="kw">let</span> saida = <span class="fn">exec</span>(<span class="str">"ls -la"</span>);
+<span class="fn">print</span>(saida);
+
+<span class="kw">let</span> data = <span class="fn">exec</span>(<span class="str">"date"</span>);
+<span class="fn">print</span>(<span class="str">"Hoje é:"</span>, data);</code></pre>
+
+    <p>Se o comando falhar (exit != 0), lança exceção com o stderr.</p>
+
+    <h3>exec_run(cmd) — só exit code</h3>
+    <pre><code><span class="kw">let</span> code = <span class="fn">exec_run</span>(<span class="str">"./teste.sh"</span>);
+<span class="kw">if</span> code == <span class="num">0</span> {
+    <span class="fn">print</span>(<span class="str">"script ok"</span>);
+} <span class="kw">else</span> {
+    <span class="fn">print</span>(<span class="str">"falhou com código"</span>, code);
+}</code></pre>
+
+    <h3>Com try/catch</h3>
+    <pre><code><span class="kw">try</span> {
+    <span class="fn">exec</span>(<span class="str">"ls /nao/existe"</span>);
+} <span class="kw">catch</span> e {
+    <span class="fn">print</span>(<span class="str">"Capturado:"</span>, e);
+}
+<span class="cm">// Capturado: comando falhou (exit 2): ls: cannot access...</span></code></pre>
+
+    <h3>Multiplataforma</h3>
+    <p>Usa <code>sh -c</code> no Linux/macOS e <code>cmd /C</code> no Windows. Funciona igual nos dois.</p>
+
+    <div class="danger-box">
+      <strong>⚠️ Segurança no servidor web:</strong> <code>exec()</code> é <strong>bloqueado por padrão</strong> em <code>icube --serve</code>. Habilite só se confiar nos usuários:
+      <pre style="margin-top:8px"><code>ICUBE_ALLOW_EXEC=1 icube --serve 9000</code></pre>
+      Em CLI e REPL, funciona sempre.
+    </div>
+
+    <!-- ============================================================ -->
+    <h2 id="banco">14. Banco de Dados</h2>
+
+    <h3>Configurar</h3>
+    <pre><code><span class="cm"># .env</span>
+ICUBE_DB_URL=postgres://usuario:senha@localhost:5432/meubanco</code></pre>
+
+    <h3>Conectar</h3>
+    <pre><code><span class="fn">db.connect_default</span>();              <span class="cm">// via ICUBE_DB_URL</span>
+<span class="fn">db.connect_named</span>(<span class="str">"producao"</span>);    <span class="cm">// via icube.toml</span>
+<span class="fn">db.connect</span>(<span class="str">"postgres://..."</span>);   <span class="cm">// direto</span></code></pre>
+
+    <div class="info-box">
+      <strong>Idempotente:</strong> chamar <code>connect_default()</code> várias vezes é seguro. Só conecta uma vez.
+    </div>
+
+    <h3>Executar (INSERT/UPDATE/DELETE)</h3>
+    <pre><code><span class="fn">db.execute</span>(
+    <span class="str">"INSERT INTO usuarios (nome, idade) VALUES ($1, $2)"</span>,
+    [<span class="str">"Ana"</span>, <span class="num">30</span>]
+);
+
+<span class="fn">db.execute</span>(<span class="str">"DELETE FROM usuarios WHERE id = $1"</span>, [<span class="num">5</span>]);</code></pre>
+
+    <h3>Consultar</h3>
+    <pre><code><span class="kw">let</span> todos = <span class="fn">db.query</span>(<span class="str">"SELECT * FROM usuarios ORDER BY id"</span>);
+<span class="kw">for</span> u <span class="kw">in</span> todos {
+    <span class="fn">print</span>(u[<span class="str">"id"</span>], u[<span class="str">"nome"</span>]);
+}
+
+<span class="kw">let</span> um = <span class="fn">db.query_one</span>(
+    <span class="str">"SELECT * FROM usuarios WHERE id = $1"</span>,
+    [<span class="num">5</span>]
+);
+
+<span class="kw">if</span> um == <span class="kw">null</span> {
+    <span class="fn">print</span>(<span class="str">"Não encontrado"</span>);
+} <span class="kw">else</span> {
+    <span class="fn">print</span>(<span class="str">"Nome:"</span>, um[<span class="str">"nome"</span>]);
+}</code></pre>
+
+    <h3>Parâmetros seguros</h3>
+    <table>
+      <tr><th>Banco</th><th>Sintaxe</th></tr>
+      <tr><td>PostgreSQL</td><td><code>$1</code>, <code>$2</code>, ...</td></tr>
+      <tr><td>MySQL</td><td><code>?</code> (na ordem)</td></tr>
+    </table>
+
+    <div class="danger-box">
+      <strong>Nunca</strong> concatene valores no SQL. Use sempre placeholders para prevenir SQL injection.
+    </div>
+
+    <h3>Mapeamento SQL → Icube</h3>
+    <table>
+      <tr><th>SQL</th><th>Icube</th></tr>
+      <tr><td>INTEGER, BIGINT, SMALLINT</td><td><code>int</code></td></tr>
+      <tr><td>REAL, DOUBLE PRECISION</td><td><code>float</code></td></tr>
+      <tr><td>NUMERIC, DECIMAL</td><td><code>decimal</code></td></tr>
+      <tr><td>BOOLEAN</td><td><code>bool</code></td></tr>
+      <tr><td>TEXT, VARCHAR</td><td><code>string</code></td></tr>
+      <tr><td>DATE</td><td><code>date</code></td></tr>
+      <tr><td>TIME</td><td><code>time</code></td></tr>
+      <tr><td>TIMESTAMP, TIMESTAMPTZ</td><td><code>datetime</code></td></tr>
+      <tr><td>UUID, JSONB</td><td><code>null</code> (ainda não suportado)</td></tr>
+    </table>
+
+    <!-- ============================================================ -->
+    <h2 id="transacoes">15. Transações</h2>
+
+    <pre><code><span class="fn">db.connect_default</span>();
+<span class="fn">db.begin</span>();
+
+<span class="kw">try</span> {
+    <span class="fn">db.execute</span>(
+        <span class="str">"INSERT INTO pedidos (cliente, valor) VALUES ($1, $2)"</span>,
+        [<span class="str">"Ana"</span>, <span class="num">150.00</span>]
+    );
+    <span class="fn">db.execute</span>(
+        <span class="str">"UPDATE estoque SET qtd = qtd - 1 WHERE produto = $1"</span>,
+        [<span class="str">"Caneta"</span>]
+    );
+    <span class="fn">db.commit</span>();
+    <span class="fn">print</span>(<span class="str">"Pedido registrado"</span>);
+} <span class="kw">catch</span> e {
+    <span class="fn">db.rollback</span>();
+    <span class="fn">print</span>(<span class="str">"Falhou, desfeito:"</span>, e);
+    <span class="kw">throw</span> e;
+}</code></pre>
+
+    <h3>Rollback automático</h3>
+    <ul>
+      <li>Processo morre com transação aberta</li>
+      <li><code>exit()</code> chamado com transação aberta</li>
+      <li>Timeout no servidor web</li>
+    </ul>
+
+    <!-- ============================================================ -->
+    <h2 id="decimal">16. Tipo Decimal</h2>
+
+    <p>Precisão de 28-29 dígitos. Ideal para dinheiro.</p>
+
+    <h3>Por que decimal?</h3>
+    <pre><code><span class="cm">// ❌ float perde precisão</span>
+<span class="fn">print</span>(<span class="num">0.1</span> + <span class="num">0.2</span>);   <span class="cm">// 0.30000000000000004</span>
+
+<span class="cm">// ✅ decimal preserva</span>
+<span class="kw">let</span> a: decimal = <span class="num">0.1</span>;
+<span class="kw">let</span> b: decimal = <span class="num">0.2</span>;
+<span class="fn">print</span>(a + b);         <span class="cm">// 0.3</span></code></pre>
+
+    <h3>SQL com NUMERIC</h3>
+    <pre><code><span class="kw">let</span> r = <span class="fn">db.query</span>(<span class="str">"SELECT preco FROM cotacoes"</span>);
+<span class="kw">for</span> c <span class="kw">in</span> r {
+    <span class="fn">print</span>(c[<span class="str">"preco"</span>]);  <span class="cm">// 240.99 (não null!)</span>
+}</code></pre>
+
+    <!-- ============================================================ -->
+    <h2 id="datas">17. Datas e Tempo</h2>
+
+    <pre><code><span class="kw">let</span> d = <span class="str">"2026-01-15"</span> <span class="kw">as</span> date;
+<span class="kw">let</span> t = <span class="str">"14:30:00"</span> <span class="kw">as</span> time;
+<span class="kw">let</span> dt = <span class="str">"2026-01-15 14:30:00"</span> <span class="kw">as</span> datetime;
+<span class="kw">let</span> hoje = <span class="fn">today</span>();
+<span class="kw">let</span> agora = <span class="fn">now</span>();
+
+<span class="kw">if</span> <span class="fn">today</span>() &gt; (<span class="str">"2026-01-01"</span> <span class="kw">as</span> date) {
+    <span class="fn">print</span>(<span class="str">"Depois do ano novo"</span>);
+}</code></pre>
+
+    <!-- ============================================================ -->
+    <h2 id="ia">18. Inteligência Artificial</h2>
+
+    <h3>Funções</h3>
+    <table>
+      <tr><th>Função</th><th>Retorno</th><th>Descrição</th></tr>
+      <tr><td><code>ai.is_available()</code></td><td>bool</td><td>Serviço responde?</td></tr>
+      <tr><td><code>ai.ask(prompt)</code></td><td>string</td><td>Envia prompt</td></tr>
+      <tr><td><code>ai.ask_with_system(system, prompt)</code></td><td>string</td><td>Com contexto</td></tr>
+      <tr><td><code>ai.model()</code></td><td>string</td><td>Modelo em uso</td></tr>
+    </table>
+
+    <h3>Exemplo</h3>
+    <pre><code><span class="kw">if</span> <span class="fn">ai.is_available</span>() {
+    <span class="fn">print</span>(<span class="str">"Modelo:"</span>, <span class="fn">ai.model</span>());
+
+    <span class="kw">let</span> r = <span class="fn">ai.ask</span>(<span class="str">"O que é PostgreSQL?"</span>);
+    <span class="fn">print</span>(r);
+
+    <span class="kw">let</span> system = <span class="str">"Responda apenas: positivo, negativo ou neutro."</span>;
+    <span class="kw">let</span> sentimento = <span class="fn">ai.ask_with_system</span>(system, <span class="str">"Adorei!"</span>);
+    <span class="fn">print</span>(sentimento);
+}</code></pre>
+
+    <h3>Configuração</h3>
+    <table>
+      <tr><th>Variável</th><th>Padrão</th></tr>
+      <tr><td><code>OLLAMA_HOST</code></td><td><code>http://localhost:11434</code></td></tr>
+      <tr><td><code>ICUBE_AI_MODEL</code></td><td><code>llama3</code></td></tr>
+    </table>
+
+    <h3>Combinar com banco</h3>
+    <pre><code><span class="fn">db.connect_default</span>();
+
+<span class="kw">for</span> e <span class="kw">in</span> <span class="fn">db.query</span>(<span class="str">"SELECT id, defeito FROM equipamentos"</span>) {
+    <span class="kw">let</span> urgencia = <span class="fn">ai.ask_with_system</span>(
+        <span class="str">"Classifique urgência: critico, alto, medio, baixo"</span>,
+        e[<span class="str">"defeito"</span>]
+    );
+    <span class="fn">print</span>(<span class="str">"Equip. #"</span>, e[<span class="str">"id"</span>], <span class="str">"-&gt;"</span>, urgencia);
+}</code></pre>
+
+    <!-- ============================================================ -->
+    <h2 id="servidor">19. Servidor Web</h2>
+
+    <h3>Iniciar</h3>
+    <pre><code>icube --serve 9000                          <span class="cm"># HTTP</span>
+ICUBE_TLS_AUTO=1 icube --serve 9000         <span class="cm"># HTTPS self-signed</span>
+ICUBE_TLS_CERT=/path/cert.pem \
+ICUBE_TLS_KEY=/path/key.pem \
+icube --serve 443                            <span class="cm"># HTTPS real</span></code></pre>
+
+    <h3>Endpoints</h3>
+    <table>
+      <tr><th>Método</th><th>Rota</th><th>Descrição</th></tr>
+      <tr><td>GET</td><td><code>/</code></td><td>Login + menu</td></tr>
+      <tr><td>GET</td><td><code>/&lt;arquivo&gt;</code></td><td>Estáticos de <code>www/</code></td></tr>
+      <tr><td>GET</td><td><code>/health</code></td><td>Health check → <code>ok</code></td></tr>
+      <tr><td>POST</td><td><code>/execute</code></td><td>Executa script</td></tr>
+      <tr><td>POST</td><td><code>/api/login</code></td><td>Autenticação</td></tr>
+      <tr><td>POST</td><td><code>/api/logout</code></td><td>Encerrar sessão</td></tr>
+      <tr><td>GET</td><td><code>/api/me</code></td><td>Usuário logado</td></tr>
+      <tr><td>GET</td><td><code>/api/users</code></td><td>Lista (admin)</td></tr>
+      <tr><td>POST</td><td><code>/api/users/create</code></td><td>Criar (admin)</td></tr>
+      <tr><td>POST</td><td><code>/api/users/:id/password</code></td><td>Alterar senha</td></tr>
+      <tr><td>POST</td><td><code>/api/users/:id/role</code></td><td>Alterar papel (admin)</td></tr>
+      <tr><td>POST</td><td><code>/api/users/:id/delete</code></td><td>Remover (admin)</td></tr>
+      <tr><td>POST</td><td><code>/api/upload</code></td><td>Upload de foto</td></tr>
+      <tr><td>POST</td><td><code>/session/reset</code></td><td>Resetar sessão</td></tr>
+      <tr><td>GET</td><td><code>/session/info</code></td><td>Info da sessão</td></tr>
+    </table>
+
+    <h3>Sessões</h3>
+    <ul>
+      <li>Cada sessão tem seu próprio <code>Evaluator</code> (variáveis + structs + funções persistem)</li>
+      <li>Session ID com 64 hex chars (32 bytes) via <code>OsRng</code></li>
+      <li>Cookie <code>icube_session</code> (HttpOnly, SameSite=Lax, Secure em HTTPS)</li>
+      <li>TTL de 1 hora</li>
+    </ul>
+
+    <!-- ============================================================ -->
+    <h2 id="auth">20. Autenticação</h2>
+
+    <ul>
+      <li>Senhas com <strong>Argon2id</strong></li>
+      <li>Login via <code>POST /api/login</code></li>
+      <li>Cookie de sessão após sucesso</li>
+      <li>3 papéis: <code>administrator</code>, <code>colaborador</code>, <code>visitante</code></li>
+      <li>Rate limit: 30 req/min por IP</li>
+    </ul>
+
+    <h3>Bootstrap do admin</h3>
+    <pre><code><span class="cm"># Configure dois fatores</span>
+export ICUBE_DEV_RESET=1
+export ICUBE_DEV_RESET_TOKEN=meutoken123
+icube --serve 9000
+
+<span class="cm"># Em outro terminal</span>
+curl -X POST http://localhost:9000/api/dev/reset-admin \
+  -H "Content-Type: application/json" \
+  -d '{"password":"nova123","token":"meutoken123"}'</code></pre>
+
+    <div class="danger-box">
+      <strong>Remova <code>ICUBE_DEV_RESET</code> do ambiente</strong> após usar.
+    </div>
+
+    <!-- ============================================================ -->
+    <h2 id="seguranca">21. Segurança</h2>
+
+    <h3>Implementado</h3>
+    <table>
+      <tr><th>Item</th><th>Status</th></tr>
+      <tr><td>Senhas com Argon2id</td><td>✅</td></tr>
+      <tr><td>SQL injection via <code>$1</code>, <code>$2</code></td><td>✅</td></tr>
+      <tr><td>Cookie HttpOnly + SameSite=Lax</td><td>✅</td></tr>
+      <tr><td>Cookie Secure (HTTPS)</td><td>✅ condicional</td></tr>
+      <tr><td>Session ID CSPRNG (<code>OsRng</code>)</td><td>✅</td></tr>
+      <tr><td>Rate limit 30 req/min</td><td>✅</td></tr>
+      <tr><td>Timeout de execução</td><td>✅</td></tr>
+      <tr><td>Dev-reset com token + tempo constante</td><td>✅</td></tr>
+      <tr><td><code>exec()</code> bloqueado no servidor por padrão</td><td>✅</td></tr>
+    </table>
+
+    <h3>Boas práticas em produção</h3>
+    <ol>
+      <li>Use HTTPS real (Let's Encrypt)</li>
+      <li>Não defina <code>ICUBE_INSECURE_COOKIE</code></li>
+      <li>Remova <code>ICUBE_DEV_RESET</code> do ambiente</li>
+      <li>Mantenha <code>ICUBE_REQUIRE_AUTH=1</code></li>
+      <li>Nunca habilite <code>ICUBE_ALLOW_EXEC=1</code> em servidor público</li>
+      <li>Configure nginx como proxy reverso (TLS + HSTS + CSP)</li>
+    </ol>
+
+    <!-- ============================================================ -->
+    <h2 id="limitacoes">22. Limitações Conhecidas</h2>
+
+    <h3>Linguagem</h3>
+    <ul>
+      <li>Sem <code>switch/match</code></li>
+      <li>Sem herança de structs</li>
+      <li>Sem closures</li>
+      <li>Sem módulos/import</li>
+      <li>Sem <code>push/pop</code> em listas</li>
+      <li>Sem interpolação de string</li>
+      <li>Sem <code>+=</code>, <code>-=</code>, etc.</li>
+    </ul>
+
+    <h3>Tipos</h3>
+    <ul>
+      <li>Sem <code>uuid</code>, <code>json</code> (JSONB)</li>
+      <li>Arrays heterogêneos viram <code>list&lt;any&gt;</code></li>
+    </ul>
+
+    <h3>Banco</h3>
+    <ul>
+      <li>Apenas um pool ativo por vez</li>
+      <li>Sem transações aninhadas (savepoints)</li>
+      <li>Colunas UUID, JSONB retornam <code>null</code></li>
+    </ul>
+
+    <h3>IA</h3>
+    <ul>
+      <li>Sem streaming</li>
+      <li>Timeout 180s</li>
+      <li>Sem cache</li>
+    </ul>
+
+    <h3>Ferramental</h3>
+    <ul>
+      <li>REPL single-line (sem multi-linha)</li>
+      <li>Sem LSP / autocomplete em editores</li>
+    </ul>
+
+    <!-- ============================================================ -->
+    <h2 id="roadmap">23. Roadmap</h2>
+
+    <h3>Concluído</h3>
+    <table>
+      <tr><th>Versão</th><th>Conquista</th></tr>
+      <tr><td>v0.1</td><td>Pipeline completo</td></tr>
+      <tr><td>v0.2</td><td>Type checker estático</td></tr>
+      <tr><td>v0.3</td><td>PostgreSQL</td></tr>
+      <tr><td>v0.4</td><td>MySQL + parâmetros seguros</td></tr>
+      <tr><td>v0.5</td><td>Servidor web + IA</td></tr>
+      <tr><td>v0.6</td><td>Arrays + break/continue</td></tr>
+      <tr><td>v0.7.0-5</td><td>Try/catch + date/time + transações + sessões + auth</td></tr>
+      <tr><td>v0.7.6</td><td>Segurança endurecida + soundness de nullable</td></tr>
+      <tr><td>v0.7.7</td><td>Decimal nativo + null propagation</td></tr>
+      <tr><td>v0.7.8</td><td>exec() / exec_run()</td></tr>
+      <tr><td><strong>v0.8.0</strong></td><td><strong>Structs + métodos</strong></td></tr>
+    </table>
+
+    <h3>Próximas versões</h3>
+    <table>
+      <tr><th>Versão</th><th>Foco</th></tr>
+      <tr><td>v0.9</td><td>JSON, switch/match, interpolação, push/pop, testes</td></tr>
+      <tr><td>v1.0</td><td>LSP, distribuição, empacotamento</td></tr>
+    </table>
+
+    <!-- ============================================================ -->
+    <h2 id="changelog">24. Changelog resumido</h2>
+
+    <h3>v0.8.0</h3>
+    <ul>
+      <li>✅ <code>struct</code> — tipos definidos pelo usuário</li>
+      <li>✅ Métodos (<code>fn Tipo.metodo(self, ...)</code>)</li>
+      <li>✅ Field access (<code>obj.campo</code>)</li>
+      <li>✅ Method call (<code>obj.metodo()</code>)</li>
+      <li>✅ Cast implícito em campos e argumentos</li>
+      <li>✅ REPL/servidor persistem structs e funções</li>
+    </ul>
+
+    <h3>v0.7.8</h3>
+    <ul>
+      <li>✅ <code>exec(cmd)</code> e <code>exec_run(cmd)</code></li>
+      <li>✅ Env <code>ICUBE_ALLOW_EXEC</code></li>
+    </ul>
+
+    <h3>v0.7.7</h3>
+    <ul>
+      <li>✅ Tipo <code>decimal</code> nativo</li>
+      <li>✅ SQL NUMERIC → decimal</li>
+      <li>✅ Null propagation estilo SQL</li>
+    </ul>
+
+    <h3>v0.7.6</h3>
+    <ul>
+      <li>✅ Session ID CSPRNG (<code>OsRng</code>)</li>
+      <li>✅ Cookie Secure condicional</li>
+      <li>✅ Dev-reset com token</li>
+      <li>✅ REPL stateful + auto-<code>;</code></li>
+      <li>✅ Soundness de nullable</li>
+    </ul>
+
+  </main>
+</div>
+
+<footer>
+  Documentação Icube v0.8.0 · Desenvolvido por <strong>Cláudio Pereira</strong> · Bacharel em Ciências da Computação
+</footer>
+
+<script>
+// Highlight sidebar link on scroll
+const sections = document.querySelectorAll('.content h2[id]');
+const navLinks = document.querySelectorAll('.sidebar nav a');
+
+function highlight() {
+  let current = '';
+  sections.forEach(section => {
+    const top = section.offsetTop - 100;
+    if (window.scrollY >= top) current = section.id;
+  });
+  navLinks.forEach(link => {
+    link.classList.toggle('active', link.getAttribute('href') === '#' + current);
+  });
+}
+
+window.addEventListener('scroll', highlight);
+highlight();
+</script>
+
+</body>
+</html>

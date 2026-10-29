@@ -1,4 +1,5 @@
 mod ai;
+mod hardware;
 mod lexer;
 mod parser;
 mod eval;
@@ -82,6 +83,7 @@ fn print_help() {
     println!("    ICUBE_INSECURE_COOKIE  1 = desabilita Secure no cookie (dev)");
     println!("    ICUBE_DEV_RESET      1 = habilita reset-admin (use com token)");
     println!("    ICUBE_DEV_RESET_TOKEN  Token para reset-admin");
+    println!("    ICUBE_ALLOW_EXEC     1 = habilita exec()/exec_run() no servidor");
     println!("    OLLAMA_HOST          URL do Ollama (padrão: http://localhost:11434)");
     println!("    ICUBE_AI_MODEL       Modelo de IA (padrão: llama3)");
 }
@@ -111,6 +113,8 @@ fn run_source(src: &str) -> i32 {
         return 1;
     }
     let mut evaluator = eval::Evaluator::new();
+    // ⭐ CLI: sempre permite exec() / exec_run()
+    evaluator.set_allow_exec(true);
     match evaluator.run(&program) {
         Ok(()) => 0,
         Err(eval::EvalError(msg)) if msg.starts_with("__ICUBE_EXIT_") => {
@@ -128,50 +132,12 @@ fn run_source(src: &str) -> i32 {
     }
 }
 
-//fn repl() {
-//    println!("Icube REPL v{} — digite 'exit' para sair", VERSION);
- //   let stdin = io::stdin();
- //   let mut evaluator = eval::Evaluator::new();
- //   loop {
- //       print!("icube> ");
- //       io::stdout().flush().ok();
- //       let mut line = String::new();
- //       if stdin.lock().read_line(&mut line).is_err() { break; }
- //       let line = line.trim();
- //       if line.eq_ignore_ascii_case("exit") { break; }
- //       if line.is_empty() { continue; }
-  //      let program = match compile(line) {
-//            Ok(p) => p,
-//            Err(e) => { eprintln!("Erro: {}", e); continue; }
-//        };
-        // Usa o estado atual do evaluator para alimentar o checker
-        // (variáveis de linhas anteriores são visíveis ao type checker).
-//        let initial_types = evaluator.initial_types();
-//        let checker = type_checker::TypeChecker::new();
-//        if let Err(e) = checker.check_program_with_env(&program, initial_types) {
-//            eprintln!("Erro de tipo: {}", e);
-//            continue;
-//        }
- //       match evaluator.run(&program) {
- //           Ok(()) => {}
- //           Err(eval::EvalError(msg)) if msg.starts_with("__ICUBE_EXIT_") => {
- //               let code: i32 = msg
- //                   .trim_start_matches("__ICUBE_EXIT_")
- //                   .trim_end_matches("__")
- //                   .parse()
- //                   .unwrap_or(0);
- //               std::process::exit(code);
- //           }
- //           Err(e) => eprintln!("Erro de execução: {}", e),
- //       }
- //   }
-//}
-
-
 fn repl() {
     println!("Icube REPL v{} — digite 'exit' para sair", VERSION);
     let stdin = io::stdin();
     let mut evaluator = eval::Evaluator::new();
+    // ⭐ REPL: sempre permite exec() / exec_run()
+    evaluator.set_allow_exec(true);
     loop {
         print!("icube> ");
         io::stdout().flush().ok();
@@ -182,8 +148,7 @@ fn repl() {
         if raw.is_empty() { continue; }
 
         // Auto-insere `;` se o usuário esqueceu.
-        // Só pula quando a linha termina em `{` (bloco aberto) ou `}` (fechamento)
-        // para não estragar construções multi-linha.
+        // Só pula quando a linha termina em `{` ou `}` para não estragar blocos.
         let line: String = if raw.ends_with(';')
             || raw.ends_with('{')
             || raw.ends_with('}')
@@ -200,8 +165,10 @@ fn repl() {
         // Usa o estado atual do evaluator para alimentar o checker
         // (variáveis de linhas anteriores são visíveis ao type checker).
         let initial_types = evaluator.initial_types();
+        let initial_structs = evaluator.initial_structs();
+        let initial_functions = evaluator.initial_functions();
         let checker = type_checker::TypeChecker::new();
-        if let Err(e) = checker.check_program_with_env(&program, initial_types) {
+        if let Err(e) = checker.check_program_with_env_structs_fns(&program, initial_types, initial_structs, initial_functions) {
             eprintln!("Erro de tipo: {}", e);
             continue;
         }
@@ -219,4 +186,3 @@ fn repl() {
         }
     }
 }
-

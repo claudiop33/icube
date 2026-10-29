@@ -1,0 +1,586 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Serial Monitor — Icube</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔌</text></svg>">
+<style>
+:root {
+  --primary: #1976d2;
+  --primary-light: #42a5f5;
+  --bg: #0a0e14;
+  --bg-alt: #0d1117;
+  --bg-card: #161b22;
+  --text: #e6edf3;
+  --text-muted: #8b949e;
+  --border: #21262d;
+  --border-strong: #30363d;
+  --success: #3fb950;
+  --danger: #f85149;
+  --warning: #d29922;
+  --mono: 'JetBrains Mono', 'Fira Code', Consolas, monospace;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  line-height: 1.55;
+}
+a { color: var(--primary-light); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+.header {
+  background: var(--bg-card);
+  border-bottom: 1px solid var(--border);
+  padding: 14px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.header-left { display: flex; align-items: center; gap: 16px; }
+.header-left a.home {
+  color: var(--text-muted);
+  padding: 6px 12px;
+  border-radius: 6px;
+}
+.header-left a.home:hover { background: var(--bg-alt); color: var(--text); text-decoration: none; }
+.logo { font-size: 1.15rem; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+.logo .accent { color: var(--primary-light); }
+
+.header-right { display: flex; align-items: center; gap: 12px; }
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 14px;
+  border-radius: 16px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  background: var(--bg-alt);
+  border: 1px solid var(--border);
+}
+.status-badge .dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--text-muted);
+}
+.status-badge.connected .dot { background: var(--success); box-shadow: 0 0 8px var(--success); }
+.status-badge.connected { color: var(--success); border-color: var(--success); }
+.status-badge.error .dot { background: var(--danger); }
+.status-badge.error { color: var(--danger); border-color: var(--danger); }
+
+.main {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 24px;
+  display: grid;
+  grid-template-columns: 340px 1fr;
+  gap: 20px;
+}
+@media (max-width: 900px) {
+  .main { grid-template-columns: 1fr; }
+}
+
+.card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 20px;
+}
+.card h2 {
+  font-size: 1rem;
+  font-weight: 700;
+  margin-bottom: 16px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.field { margin-bottom: 14px; }
+.field label {
+  display: block;
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+}
+.field select, .field input {
+  width: 100%;
+  padding: 10px 12px;
+  background: var(--bg-alt);
+  border: 1px solid var(--border-strong);
+  border-radius: 6px;
+  color: var(--text);
+  font-size: 0.9rem;
+  font-family: inherit;
+}
+.field select:focus, .field input:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(25, 118, 210, 0.15);
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 18px;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+  font-family: inherit;
+}
+.btn:hover:not(:disabled) { transform: translateY(-1px); }
+.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.btn-primary { background: var(--primary); color: white; }
+.btn-primary:hover:not(:disabled) { background: #1565c0; }
+.btn-danger { background: var(--danger); color: white; }
+.btn-secondary {
+  background: var(--bg-alt);
+  color: var(--text);
+  border: 1px solid var(--border-strong);
+}
+.btn-secondary:hover:not(:disabled) { background: #1c2128; }
+.btn-full { width: 100%; justify-content: center; }
+
+.info-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 0;
+  font-size: 0.88rem;
+  border-bottom: 1px solid var(--border);
+}
+.info-row:last-child { border-bottom: none; }
+.info-row .label { color: var(--text-muted); }
+.info-row .value { color: var(--text); font-weight: 600; font-family: var(--mono); }
+
+.monitor-card { display: flex; flex-direction: column; }
+.monitor-log {
+  background: #000;
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  padding: 14px 18px;
+  height: 500px;
+  overflow-y: auto;
+  font-family: var(--mono);
+  font-size: 0.85rem;
+  line-height: 1.6;
+  margin-bottom: 14px;
+}
+.monitor-log:empty::before {
+  content: 'Aguardando dados do dispositivo...';
+  color: var(--text-muted);
+  font-style: italic;
+}
+.log-entry {
+  padding: 2px 0;
+  white-space: pre-wrap;
+  word-break: break-all;
+  animation: fadeIn 0.2s;
+}
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+.log-entry .time { color: var(--text-muted); margin-right: 10px; }
+.log-entry .data { color: #7ee787; }
+.log-entry.error .data { color: #ff7b72; }
+
+.send-row {
+  display: flex;
+  gap: 8px;
+}
+.send-row input {
+  flex: 1;
+  padding: 12px 16px;
+  background: var(--bg-alt);
+  border: 1px solid var(--border-strong);
+  border-radius: 6px;
+  color: var(--text);
+  font-family: var(--mono);
+  font-size: 0.9rem;
+}
+.send-row input:focus {
+  outline: none;
+  border-color: var(--primary);
+}
+.send-row .btn { padding: 12px 20px; }
+
+.toast {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-strong);
+  padding: 12px 18px;
+  border-radius: 8px;
+  font-size: 0.88rem;
+  box-shadow: 0 12px 32px rgba(0,0,0,0.5);
+  transform: translateX(400px);
+  transition: transform 0.3s;
+  z-index: 2000;
+  max-width: 400px;
+}
+.toast.show { transform: translateX(0); }
+.toast.success { border-left: 3px solid var(--success); }
+.toast.error { border-left: 3px solid var(--danger); }
+
+.btn-clear {
+  padding: 6px 12px;
+  font-size: 0.78rem;
+  background: transparent;
+  border: 1px solid var(--border-strong);
+  color: var(--text-muted);
+  border-radius: 5px;
+  cursor: pointer;
+  margin-left: auto;
+}
+.btn-clear:hover { color: var(--text); border-color: var(--text-muted); }
+</style>
+</head>
+<body>
+
+<header class="header">
+  <div class="header-left">
+    <a href="/" class="home">← Início</a>
+    <div class="logo">🐣 Icube <span class="accent">Serial</span></div>
+  </div>
+  <div class="header-right">
+    <span class="status-badge" id="status-badge">
+      <span class="dot"></span>
+      <span id="status-text">Desconectado</span>
+    </span>
+  </div>
+</header>
+
+<div class="main">
+
+  <!-- COLUNA ESQUERDA: CONEXÃO -->
+  <div class="card">
+    <h2>🔌 Conexão</h2>
+
+    <div class="field">
+      <label for="port-select">Porta Serial</label>
+      <select id="port-select">
+        <option value="">Carregando...</option>
+      </select>
+    </div>
+
+    <div class="field">
+      <label for="baud-input">Baud Rate</label>
+      <select id="baud-input">
+        <option value="9600" selected>9600</option>
+        <option value="19200">19200</option>
+        <option value="38400">38400</option>
+        <option value="57600">57600</option>
+        <option value="115200">115200</option>
+      </select>
+    </div>
+
+    <div class="field">
+      <button class="btn btn-primary btn-full" id="btn-connect" onclick="conectar()">
+        🔗 Conectar
+      </button>
+    </div>
+
+    <div class="field">
+      <button class="btn btn-secondary btn-full" id="btn-refresh-ports" onclick="carregarPortas()">
+        🔄 Atualizar portas
+      </button>
+    </div>
+
+    <div class="field">
+      <button class="btn btn-danger btn-full" id="btn-disconnect" onclick="desconectar()" disabled>
+        ⏹️ Desconectar
+      </button>
+    </div>
+
+    <h2 style="margin-top: 24px;">ℹ️ Informações</h2>
+    <div class="info-row">
+      <span class="label">Porta</span>
+      <span class="value" id="info-port">—</span>
+    </div>
+    <div class="info-row">
+      <span class="label">Baud</span>
+      <span class="value" id="info-baud">—</span>
+    </div>
+    <div class="info-row">
+      <span class="label">Recebido</span>
+      <span class="value" id="info-received">0 bytes</span>
+    </div>
+    <div class="info-row">
+      <span class="label">Enviado</span>
+      <span class="value" id="info-sent">0 bytes</span>
+    </div>
+
+  </div>
+
+  <!-- COLUNA DIREITA: MONITOR -->
+  <div class="card monitor-card">
+    <h2>📡 Monitor Serial <button class="btn-clear" onclick="limparLog()">🗑️ Limpar</button></h2>
+
+    <div class="monitor-log" id="log"></div>
+
+    <div class="send-row">
+      <input
+        type="text"
+        id="send-input"
+        placeholder="Digite uma mensagem para enviar ao Arduino..."
+        onkeydown="if(event.key==='Enter'){enviar();}"
+        disabled
+      />
+      <button class="btn btn-primary" id="btn-send" onclick="enviar()" disabled>
+        📤 Enviar
+      </button>
+    </div>
+  </div>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+let connected = false;
+let pollTimer = null;
+let totalReceived = 0;
+let totalSent = 0;
+let currentPort = '';
+let currentBaud = 0;
+
+// ============================================================
+// API
+// ============================================================
+async function api(path, options = {}) {
+  const r = await fetch(path, {
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json', ...(options.headers || {}) },
+    ...options
+  });
+  if (r.status === 401) {
+    location.href = '/';
+    throw new Error('Não autenticado');
+  }
+  return await r.json();
+}
+
+// ============================================================
+// PORTAS
+// ============================================================
+async function carregarPortas() {
+  const sel = document.getElementById('port-select');
+  sel.innerHTML = '<option value="">Carregando...</option>';
+  try {
+    const d = await api('/api/serial/ports');
+    if (d.ok && d.ports.length > 0) {
+      sel.innerHTML = d.ports.map(p =>
+        `<option value="${p.porta}">${p.porta} — ${p.descricao}</option>`
+      ).join('');
+    } else {
+      sel.innerHTML = '<option value="">Nenhuma porta encontrada</option>';
+    }
+  } catch (e) {
+    sel.innerHTML = '<option value="">Erro ao listar</option>';
+    showToast('Erro: ' + e.message, 'error');
+  }
+}
+
+// ============================================================
+// CONECTAR
+// ============================================================
+async function conectar() {
+  const porta = document.getElementById('port-select').value;
+  const baud = parseInt(document.getElementById('baud-input').value);
+
+  if (!porta) {
+    showToast('Selecione uma porta primeiro', 'error');
+    return;
+  }
+
+  document.getElementById('btn-connect').disabled = true;
+  document.getElementById('btn-connect').textContent = '⏳ Conectando...';
+
+  try {
+    const d = await api('/api/serial/open', {
+      method: 'POST',
+      body: JSON.stringify({ porta, baud })
+    });
+
+    if (!d.ok) {
+      throw new Error(d.error || 'Erro ao conectar');
+    }
+
+    connected = true;
+    currentPort = porta;
+    currentBaud = baud;
+
+    document.getElementById('status-badge').className = 'status-badge connected';
+    document.getElementById('status-text').textContent = 'Conectado em ' + porta;
+    document.getElementById('info-port').textContent = porta;
+    document.getElementById('info-baud').textContent = baud;
+    document.getElementById('btn-disconnect').disabled = false;
+    document.getElementById('send-input').disabled = false;
+    document.getElementById('btn-send').disabled = false;
+
+    showToast('Conectado em ' + porta, 'success');
+    addLog('✓ Conectado em ' + porta + ' @ ' + baud + ' baud', 'info');
+    iniciarPoll();
+
+  } catch (e) {
+    showToast('Erro: ' + e.message, 'error');
+    document.getElementById('btn-connect').disabled = false;
+    document.getElementById('btn-connect').textContent = '🔗 Conectar';
+    addLog('✗ Erro ao conectar: ' + e.message, 'error');
+  }
+}
+
+// ============================================================
+// DESCONECTAR
+// ============================================================
+async function desconectar() {
+  try {
+    const d = await api('/api/serial/close', { method: 'POST' });
+    if (d.ok) {
+      showToast('Desconectado', 'info');
+    }
+  } catch (e) {
+    showToast('Erro: ' + e.message, 'error');
+  }
+
+  pararPoll();
+  connected = false;
+  currentPort = '';
+
+  document.getElementById('status-badge').className = 'status-badge';
+  document.getElementById('status-text').textContent = 'Desconectado';
+  document.getElementById('info-port').textContent = '—';
+  document.getElementById('info-baud').textContent = '—';
+  document.getElementById('btn-connect').disabled = false;
+  document.getElementById('btn-connect').textContent = '🔗 Conectar';
+  document.getElementById('btn-disconnect').disabled = true;
+  document.getElementById('send-input').disabled = true;
+  document.getElementById('btn-send').disabled = true;
+
+  addLog('○ Desconectado', 'info');
+}
+
+// ============================================================
+// POLL (leitura contínua)
+// ============================================================
+function iniciarPoll() {
+  if (pollTimer) return;
+  pollTimer = setInterval(async () => {
+    if (!connected) return;
+    try {
+      const d = await api('/api/serial/read');
+      if (d.ok && d.data && d.data.length > 0) {
+        totalReceived += d.data.length;
+        document.getElementById('info-received').textContent = formatBytes(totalReceived);
+        addLog(d.data, 'data');
+      }
+    } catch (e) {
+      // Silencioso para não poluir
+    }
+  }, 500);
+}
+
+function pararPoll() {
+  if (pollTimer) {
+    clearInterval(pollTimer);
+    pollTimer = null;
+  }
+}
+
+// ============================================================
+// ENVIAR
+// ============================================================
+async function enviar() {
+  const inp = document.getElementById('send-input');
+  const msg = inp.value.trim();
+  if (!msg) return;
+
+  try {
+    const d = await api('/api/serial/send', {
+      method: 'POST',
+      body: JSON.stringify({ mensagem: msg })
+    });
+
+    if (!d.ok) throw new Error(d.error || 'Erro ao enviar');
+
+    totalSent += msg.length + 1;
+    document.getElementById('info-sent').textContent = formatBytes(totalSent);
+    addLog('→ ' + msg, 'data');
+    inp.value = '';
+
+  } catch (e) {
+    showToast('Erro: ' + e.message, 'error');
+    addLog('✗ Erro ao enviar: ' + e.message, 'error');
+  }
+}
+
+// ============================================================
+// LOG
+// ============================================================
+function addLog(text, type = 'data') {
+  const log = document.getElementById('log');
+  const time = new Date().toLocaleTimeString('pt-BR');
+  const entry = document.createElement('div');
+  entry.className = 'log-entry ' + (type === 'error' ? 'error' : '');
+  entry.innerHTML = `<span class="time">${time}</span><span class="data">${escapeHtml(text)}</span>`;
+  log.appendChild(entry);
+  log.scrollTop = log.scrollHeight;
+
+  // Limita a 1000 entradas
+  while (log.children.length > 1000) {
+    log.removeChild(log.firstChild);
+  }
+}
+
+function limparLog() {
+  document.getElementById('log').innerHTML = '';
+  showToast('Log limpo', 'info');
+}
+
+// ============================================================
+// UTILS
+// ============================================================
+function escapeHtml(s) {
+  return String(s ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function formatBytes(n) {
+  if (n < 1024) return n + ' B';
+  if (n < 1024 * 1024) return (n / 1024).toFixed(1) + ' KB';
+  return (n / (1024 * 1024)).toFixed(1) + ' MB';
+}
+
+function showToast(msg, type = 'info') {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = 'toast ' + type + ' show';
+  clearTimeout(el._t);
+  el._t = setTimeout(() => el.classList.remove('show'), 3000);
+}
+
+// ============================================================
+// INIT
+// ============================================================
+carregarPortas();
+</script>
+
+</body>
+</html>

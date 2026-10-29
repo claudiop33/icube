@@ -9,6 +9,7 @@ pub enum Type {
     List(Box<Type>),
     Any,
     Nullable(Box<Type>),
+    Struct(String),
 }
 
 #[derive(Debug, Clone)]
@@ -21,6 +22,7 @@ pub enum Expr {
     Call { callee: Box<Expr>, args: Vec<Expr> },
     Cast { expr: Box<Expr>, ty: Type },
     Index { obj: Box<Expr>, index: Box<Expr> },
+    StructLit { struct_name: String, fields: Vec<(String, Expr)> },
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -41,6 +43,12 @@ pub struct FnDecl {
 }
 
 #[derive(Debug, Clone)]
+pub struct StructDecl {
+    pub name: String,
+    pub fields: Vec<(String, Type)>,
+}
+
+#[derive(Debug, Clone)]
 pub enum Stmt {
     Let { name: String, ty: Option<Type>, value: Expr },
     Assign { name: String, value: Expr },
@@ -54,6 +62,7 @@ pub enum Stmt {
     Block(Vec<Stmt>),
     Fn(FnDecl),
     Return(Option<Expr>),
+    Struct(StructDecl),
 }
 
 #[derive(Debug)]
@@ -102,6 +111,7 @@ impl Parser {
             TokenKind::For => self.parse_for(),
             TokenKind::Fn => self.parse_fn(),
             TokenKind::Try => self.parse_try(),
+            TokenKind::Struct => self.parse_struct_decl(),
             TokenKind::Throw => {
                 self.advance();
                 let e = self.parse_expr()?;
@@ -155,23 +165,28 @@ impl Parser {
         Ok(Stmt::Let { name, ty, value })
     }
 
-  fn parse_type(&mut self) -> Result<Type, ParseError> {
-    let base = match self.advance() {
-        TokenKind::IntType => Type::Int,
-        TokenKind::FloatType => Type::Float,
-        TokenKind::DecimalType => Type::Decimal,
-        TokenKind::BoolType => Type::Bool,
-        TokenKind::StringType => Type::String,
-        TokenKind::DateType => Type::Date,
-        TokenKind::TimeType => Type::Time,
-        TokenKind::DateTimeType => Type::DateTime,
-        _ => return self.error("esperado tipo"),
-    };
-    if matches!(self.peek(), TokenKind::Question) {
-        self.advance();
-        Ok(Type::Nullable(Box::new(base)))
-    } else { Ok(base) }
-}
+    fn parse_type(&mut self) -> Result<Type, ParseError> {
+        let base = match self.peek() {
+            TokenKind::IntType => { self.advance(); Type::Int }
+            TokenKind::FloatType => { self.advance(); Type::Float }
+            TokenKind::DecimalType => { self.advance(); Type::Decimal }
+            TokenKind::BoolType => { self.advance(); Type::Bool }
+            TokenKind::StringType => { self.advance(); Type::String }
+            TokenKind::DateType => { self.advance(); Type::Date }
+            TokenKind::TimeType => { self.advance(); Type::Time }
+            TokenKind::DateTimeType => { self.advance(); Type::DateTime }
+            TokenKind::Ident(name) => {
+                let name = name.clone();
+                self.advance();
+                Type::Struct(name)
+            }
+            _ => return self.error("esperado tipo"),
+        };
+        if matches!(self.peek(), TokenKind::Question) {
+            self.advance();
+            Ok(Type::Nullable(Box::new(base)))
+        } else { Ok(base) }
+    }
 
     fn parse_if(&mut self) -> Result<Stmt, ParseError> {
         self.expect(TokenKind::If)?;
@@ -206,14 +221,10 @@ impl Parser {
         Ok(Stmt::For { var, iter, body })
     }
 
-    /// `try { } catch e { }` (clássico)
-    /// `try { } catch e { } finally { }` (com finally)
-    /// `try { } finally { }` (sem catch — usa sentinela "_")
     fn parse_try(&mut self) -> Result<Stmt, ParseError> {
         self.expect(TokenKind::Try)?;
         let body = self.parse_block()?;
 
-        // catch é opcional SE houver finally depois
         let (err_var, catch) = if matches!(self.peek(), TokenKind::Catch) {
             self.advance();
             let var = match self.advance() {
@@ -223,7 +234,6 @@ impl Parser {
             let catch_block = self.parse_block()?;
             (var, catch_block)
         } else {
-            // sem catch: usa sentinela "_" (vai propagar erro após o finally)
             ("_".to_string(), Vec::new())
         };
 
@@ -234,12 +244,36 @@ impl Parser {
             None
         };
 
-        // Precisa de pelo menos um dos dois: catch ou finally
         if finally.is_none() && err_var == "_" {
             return self.error("'try' precisa de pelo menos 'catch' ou 'finally'");
         }
 
         Ok(Stmt::Try { body, err_var, catch, finally })
+    }
+
+    fn parse_struct_decl(&mut self) -> Result<Stmt, ParseError> {
+        self.expect(TokenKind::Struct)?;
+        let name = match self.advance() {
+            TokenKind::Ident(s) => s,
+            _ => return self.error("esperado nome da struct"),
+        };
+        self.expect(TokenKind::LBrace)?;
+        let mut fields = Vec::new();
+        while !matches!(self.peek(), TokenKind::RBrace) {
+            if matches!(self.peek(), TokenKind::Eof) {
+                return self.error("struct não fechada com '}'");
+            }
+            let fname = match self.advance() {
+                TokenKind::Ident(s) => s,
+                _ => return self.error("esperado nome de campo"),
+            };
+            self.expect(TokenKind::Colon)?;
+            let fty = self.parse_type()?;
+            fields.push((fname, fty));
+            if matches!(self.peek(), TokenKind::Comma) { self.advance(); }
+        }
+        self.expect(TokenKind::RBrace)?;
+        Ok(Stmt::Struct(StructDecl { name, fields }))
     }
 
     fn parse_fn(&mut self) -> Result<Stmt, ParseError> {
@@ -248,15 +282,40 @@ impl Parser {
             TokenKind::Ident(s) => s,
             _ => return self.error("esperado nome de função"),
         };
+
+        let method_owner: Option<String> = name
+            .split_once('.')
+            .map(|(owner, _)| owner.to_string());
+
         self.expect(TokenKind::LParen)?;
         let mut params = Vec::new();
         while !matches!(self.peek(), TokenKind::RParen) {
-            let pname = match self.advance() {
-                TokenKind::Ident(s) => s,
+            let pname = match self.peek() {
+                TokenKind::Ident(_) => match self.advance() {
+                    TokenKind::Ident(s) => s,
+                    _ => unreachable!(),
+                },
+                TokenKind::SelfKw => {
+                    self.advance();
+                    "self".to_string()
+                }
                 _ => return self.error("esperado nome de parâmetro"),
             };
-            self.expect(TokenKind::Colon)?;
-            let pty = self.parse_type()?;
+
+            let pty = if pname == "self" {
+                if matches!(self.peek(), TokenKind::Colon) {
+                    self.advance();
+                    self.parse_type()?
+                } else if let Some(owner) = &method_owner {
+                    Type::Struct(owner.clone())
+                } else {
+                    return self.error("'self' só é permitido em métodos (fn Tipo.metodo(self))");
+                }
+            } else {
+                self.expect(TokenKind::Colon)?;
+                self.parse_type()?
+            };
+
             params.push(Param { name: pname, ty: pty });
             if matches!(self.peek(), TokenKind::Comma) { self.advance(); }
         }
@@ -422,7 +481,29 @@ impl Parser {
             TokenKind::Bool(b) => Ok(Expr::BoolLit(b)),
             TokenKind::String(s) => Ok(Expr::StringLit(s)),
             TokenKind::Null => Ok(Expr::NullLit),
-            TokenKind::Ident(name) => Ok(Expr::Ident(name)),
+            TokenKind::SelfKw => Ok(Expr::Ident("self".to_string())),
+            TokenKind::Ident(name) => {
+                if matches!(self.peek(), TokenKind::LBrace)
+                    && matches!(self.peek_at(1), TokenKind::Ident(_))
+                    && matches!(self.peek_at(2), TokenKind::Colon)
+                {
+                    self.advance();
+                    let mut fields = Vec::new();
+                    while !matches!(self.peek(), TokenKind::RBrace) {
+                        let fname = match self.advance() {
+                            TokenKind::Ident(s) => s,
+                            _ => return self.error("esperado nome de campo"),
+                        };
+                        self.expect(TokenKind::Colon)?;
+                        let fexpr = self.parse_expr()?;
+                        fields.push((fname, fexpr));
+                        if matches!(self.peek(), TokenKind::Comma) { self.advance(); }
+                    }
+                    self.expect(TokenKind::RBrace)?;
+                    return Ok(Expr::StructLit { struct_name: name, fields });
+                }
+                Ok(Expr::Ident(name))
+            }
             TokenKind::LBracket => {
                 let mut items = Vec::new();
                 if !matches!(self.peek(), TokenKind::RBracket) {

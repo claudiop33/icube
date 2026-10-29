@@ -4,7 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Icube — Linguagem de script com banco de dados e IA</title>
-    <meta name="description" content="Icube é uma linguagem de script estaticamente tipada com banco de dados, decimal e IA embutidos. Simples, segura e feita para automatizar negócios.">
+    <meta name="description" content="Icube é uma linguagem de script estaticamente tipada com banco de dados, decimal e IA embutidos. Roda em Linux e Windows.">
+    <meta name="author" content="Cláudio Pereira">
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🐣</text></svg>">
     <style>
         :root {
@@ -12,6 +13,8 @@
             --primary-light: #42a5f5;
             --primary-dark: #0d47a1;
             --accent: #64b5f6;
+            --accent-cyan: #22d3ee;
+            --accent-purple: #a78bfa;
             --bg: #0a0e14;
             --bg-alt: #0d1117;
             --bg-card: #161b22;
@@ -21,84 +24,169 @@
             --border: #21262d;
             --border-strong: #30363d;
             --success: #3fb950;
-            --warning: #d29922;
-            --danger: #f85149;
-            --code-bg: #0d1117;
-            --font-mono: 'JetBrains Mono', 'Fira Code', 'Consolas', 'Monaco', monospace;
+            --font-mono: 'JetBrains Mono', 'Fira Code', 'SF Mono', 'Consolas', 'Monaco', monospace;
         }
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        html { scroll-behavior: smooth; scroll-padding-top: 80px; }
+        html { scroll-behavior: smooth; scroll-padding-top: 120px; }
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, system-ui, sans-serif;
             background: var(--bg);
             color: var(--text);
             line-height: 1.6;
             -webkit-font-smoothing: antialiased;
+            overflow-x: hidden;
         }
         a { color: var(--primary-light); text-decoration: none; transition: color 0.2s; }
         a:hover { color: var(--accent); }
 
+        /* ⭐ NOVO — BANNER NO TOPO */
+        .top-banner {
+            position: sticky;
+            top: 0;
+            z-index: 200;
+            background: linear-gradient(90deg, #1976d2, #a78bfa, #22d3ee);
+            text-align: center;
+            padding: 10px 20px;
+            font-size: 0.9rem;
+            font-weight: 600;
+        }
+        .top-banner a {
+            color: #fff !important;
+            display: inline-block;
+            transition: transform 0.15s;
+        }
+        .top-banner a:hover {
+            transform: translateX(4px);
+            text-decoration: none;
+        }
+
+        /* ANIMATED BACKGROUND */
+        .bg-decoration {
+            position: fixed;
+            inset: 0;
+            z-index: -1;
+            overflow: hidden;
+            pointer-events: none;
+        }
+        .bg-grid {
+            position: absolute;
+            inset: 0;
+            background-image:
+                linear-gradient(rgba(25, 118, 210, 0.04) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(25, 118, 210, 0.04) 1px, transparent 1px);
+            background-size: 60px 60px;
+            mask-image: radial-gradient(ellipse 80% 60% at 50% 0%, black 40%, transparent 80%);
+            -webkit-mask-image: radial-gradient(ellipse 80% 60% at 50% 0%, black 40%, transparent 80%);
+        }
+        .orb {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(80px);
+            opacity: 0.35;
+            animation: float 20s ease-in-out infinite;
+        }
+        .orb-1 {
+            width: 500px; height: 500px;
+            background: radial-gradient(circle, #1976d2, transparent 70%);
+            top: -200px; left: 10%;
+        }
+        .orb-2 {
+            width: 400px; height: 400px;
+            background: radial-gradient(circle, #a78bfa, transparent 70%);
+            top: 20%; right: 5%;
+            animation-delay: -7s;
+        }
+        .orb-3 {
+            width: 600px; height: 600px;
+            background: radial-gradient(circle, #22d3ee, transparent 70%);
+            top: 60%; left: 30%;
+            opacity: 0.15;
+            animation-delay: -14s;
+        }
+        @keyframes float {
+            0%, 100% { transform: translate(0, 0) scale(1); }
+            33% { transform: translate(30px, -30px) scale(1.05); }
+            66% { transform: translate(-20px, 20px) scale(0.95); }
+        }
+
         /* NAV */
         nav {
             position: sticky;
-            top: 0;
+            top: 40px;
             z-index: 100;
             background: rgba(10, 14, 20, 0.85);
-            backdrop-filter: blur(12px);
+            backdrop-filter: blur(16px) saturate(180%);
+            -webkit-backdrop-filter: blur(16px) saturate(180%);
             border-bottom: 1px solid var(--border);
-            padding: 16px 0;
+            padding: 14px 0;
         }
-        nav .nav-inner {
+        .nav-inner {
             max-width: 1200px;
             margin: 0 auto;
             padding: 0 24px;
             display: flex;
             justify-content: space-between;
             align-items: center;
+            gap: 24px;
         }
-        nav .logo {
-            font-size: 1.4rem;
+        .logo {
+            font-size: 1.35rem;
             font-weight: 700;
             color: var(--text);
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 10px;
+            letter-spacing: -0.3px;
         }
-        nav .logo:hover { color: var(--primary-light); text-decoration: none; }
-        nav ul { display: flex; gap: 32px; list-style: none; }
-        nav ul a { color: var(--text-muted); font-size: 0.95rem; }
-        nav ul a:hover { color: var(--text); text-decoration: none; }
-        .btn-github {
-            background: var(--bg-card);
-            border: 1px solid var(--border-strong);
-            padding: 8px 16px;
-            border-radius: 6px;
-            color: var(--text) !important;
+        .logo:hover { color: var(--primary-light); text-decoration: none; }
+        .logo-icon {
+            font-size: 1.5rem;
+            animation: wobble 3s ease-in-out infinite;
+            display: inline-block;
+        }
+        @keyframes wobble {
+            0%, 100% { transform: rotate(0deg); }
+            25% { transform: rotate(-8deg); }
+            75% { transform: rotate(8deg); }
+        }
+        .nav-links { display: flex; gap: 24px; list-style: none; }
+        .nav-links a {
+            color: var(--text-muted);
             font-size: 0.9rem;
             font-weight: 500;
+            transition: color 0.2s;
+            padding: 4px 0;
+        }
+        .nav-links a:hover { color: var(--text); }
+        .nav-links a.highlight {
+            color: var(--primary-light);
+            font-weight: 600;
+        }
+        .btn-github {
+            background: linear-gradient(135deg, var(--bg-card), var(--bg-card-hover));
+            border: 1px solid var(--border-strong);
+            padding: 8px 16px;
+            border-radius: 8px;
+            color: var(--text) !important;
+            font-size: 0.88rem;
+            font-weight: 600;
             display: inline-flex;
             align-items: center;
-            gap: 6px;
+            gap: 8px;
+            transition: all 0.2s;
         }
-        .btn-github:hover { background: var(--bg-card-hover); text-decoration: none; }
+        .btn-github:hover {
+            background: var(--bg-card-hover);
+            border-color: var(--primary);
+            transform: translateY(-1px);
+            text-decoration: none;
+        }
 
         /* HERO */
         .hero {
-            padding: 100px 24px 80px;
+            padding: 100px 24px 120px;
             text-align: center;
             position: relative;
-            overflow: hidden;
-        }
-        .hero::before {
-            content: '';
-            position: absolute;
-            top: -50%;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 800px;
-            height: 800px;
-            background: radial-gradient(circle, rgba(25, 118, 210, 0.15) 0%, transparent 70%);
-            pointer-events: none;
         }
         .hero-inner {
             max-width: 900px;
@@ -106,30 +194,71 @@
             position: relative;
             z-index: 1;
         }
+        .hero-tags {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-bottom: 32px;
+            animation: fadeUp 0.6s ease-out;
+        }
         .hero-tag {
-            display: inline-block;
-            background: rgba(25, 118, 210, 0.15);
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: linear-gradient(135deg, rgba(25, 118, 210, 0.15), rgba(167, 139, 250, 0.15));
             border: 1px solid rgba(25, 118, 210, 0.3);
             color: var(--primary-light);
-            padding: 6px 16px;
-            border-radius: 20px;
+            padding: 8px 18px;
+            border-radius: 24px;
             font-size: 0.85rem;
             font-weight: 600;
-            margin-bottom: 24px;
+        }
+        .hero-tag.platforms {
+            background: linear-gradient(135deg, rgba(63, 185, 80, 0.15), rgba(34, 211, 238, 0.15));
+            border-color: rgba(63, 185, 80, 0.3);
+            color: #7ee787;
+        }
+        .hero-tag .pulse {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: var(--success);
+            box-shadow: 0 0 0 0 rgba(63, 185, 80, 0.7);
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(63, 185, 80, 0.7); }
+            70% { box-shadow: 0 0 0 8px rgba(63, 185, 80, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(63, 185, 80, 0); }
         }
         .hero h1 {
-            font-size: clamp(2.5rem, 7vw, 4.5rem);
+            font-size: clamp(2.8rem, 7vw, 5rem);
             font-weight: 800;
-            line-height: 1.1;
-            margin-bottom: 24px;
-            letter-spacing: -2px;
+            line-height: 1.05;
+            margin-bottom: 28px;
+            letter-spacing: -2.5px;
+            animation: fadeUp 0.6s ease-out 0.1s both;
         }
-        .hero h1 .accent { color: var(--primary-light); }
+        .gradient-text {
+            background: linear-gradient(135deg, #42a5f5 0%, #a78bfa 50%, #22d3ee 100%);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-size: 200% 200%;
+            animation: gradientShift 6s ease infinite;
+        }
+        @keyframes gradientShift {
+            0%, 100% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+        }
         .hero .subtitle {
-            font-size: clamp(1.1rem, 2.5vw, 1.35rem);
+            font-size: clamp(1.05rem, 2.2vw, 1.3rem);
             color: var(--text-muted);
-            max-width: 700px;
-            margin: 0 auto 40px;
+            max-width: 680px;
+            margin: 0 auto 44px;
+            line-height: 1.7;
+            animation: fadeUp 0.6s ease-out 0.2s both;
         }
         .hero .subtitle strong { color: var(--text); font-weight: 600; }
         .hero-buttons {
@@ -137,44 +266,68 @@
             gap: 16px;
             justify-content: center;
             flex-wrap: wrap;
-            margin-bottom: 60px;
+            margin-bottom: 80px;
+            animation: fadeUp 0.6s ease-out 0.3s both;
         }
         .btn {
             display: inline-flex;
             align-items: center;
-            gap: 8px;
-            padding: 14px 28px;
-            border-radius: 8px;
+            gap: 10px;
+            padding: 15px 30px;
+            border-radius: 10px;
             font-weight: 600;
             font-size: 1rem;
-            transition: all 0.2s;
+            transition: all 0.25s;
             border: none;
             cursor: pointer;
             font-family: inherit;
         }
         .btn:hover { transform: translateY(-2px); text-decoration: none; }
-        .btn-primary { background: var(--primary); color: white; }
-        .btn-primary:hover { background: var(--primary-dark); box-shadow: 0 8px 24px rgba(25, 118, 210, 0.4); }
-        .btn-secondary { background: var(--bg-card); color: var(--text); border: 1px solid var(--border-strong); }
-        .btn-secondary:hover { background: var(--bg-card-hover); border-color: var(--text-muted); }
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            color: white;
+            box-shadow: 0 4px 16px rgba(25, 118, 210, 0.35);
+        }
+        .btn-primary:hover {
+            box-shadow: 0 8px 24px rgba(25, 118, 210, 0.5);
+            color: white;
+        }
+        .btn-secondary {
+            background: var(--bg-card);
+            color: var(--text);
+            border: 1px solid var(--border-strong);
+        }
+        .btn-secondary:hover {
+            background: var(--bg-card-hover);
+            border-color: var(--text-muted);
+            color: var(--text);
+        }
+        @keyframes fadeUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
 
         /* TERMINAL */
         .terminal {
-            max-width: 750px;
+            max-width: 780px;
             margin: 0 auto;
             background: var(--bg-card);
             border: 1px solid var(--border-strong);
-            border-radius: 12px;
+            border-radius: 14px;
             overflow: hidden;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+            box-shadow:
+                0 20px 60px rgba(0, 0, 0, 0.6),
+                0 0 0 1px rgba(255, 255, 255, 0.02) inset,
+                0 0 80px rgba(25, 118, 210, 0.1);
             text-align: left;
+            animation: fadeUp 0.8s ease-out 0.4s both;
         }
         .terminal-header {
             display: flex;
             align-items: center;
             gap: 8px;
-            padding: 12px 16px;
-            background: var(--bg-alt);
+            padding: 14px 18px;
+            background: rgba(0, 0, 0, 0.3);
             border-bottom: 1px solid var(--border);
         }
         .terminal-dot { width: 12px; height: 12px; border-radius: 50%; }
@@ -184,82 +337,141 @@
         .terminal-title {
             margin-left: auto;
             font-family: var(--font-mono);
-            font-size: 0.85rem;
+            font-size: 0.82rem;
             color: var(--text-muted);
+            background: rgba(0, 0, 0, 0.4);
+            padding: 3px 12px;
+            border-radius: 6px;
         }
         .terminal-body {
-            padding: 20px;
+            padding: 24px;
             font-family: var(--font-mono);
-            font-size: 0.9rem;
-            line-height: 1.7;
+            font-size: 0.88rem;
+            line-height: 1.75;
         }
         .t-prompt { color: var(--success); }
-        .t-cmd { color: var(--text); }
-        .t-comment { color: var(--text-muted); font-style: italic; }
-        .t-keyword { color: #ff7b72; }
+        .t-comment { color: #6e7681; font-style: italic; }
+        .t-keyword { color: #ff7b72; font-weight: 500; }
         .t-string { color: #a5d6ff; }
         .t-fn { color: #d2a8ff; }
         .t-num { color: #79c0ff; }
-        .t-output { color: var(--text-muted); display: block; margin: 4px 0 12px; }
+        .t-var { color: #ffa657; }
 
         /* SECTIONS */
-        section { padding: 100px 24px; }
-        section.alt { background: var(--bg-alt); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+        section { padding: 110px 24px; position: relative; }
+        section.alt {
+            background: rgba(13, 17, 23, 0.6);
+            border-top: 1px solid var(--border);
+            border-bottom: 1px solid var(--border);
+        }
         .container { max-width: 1200px; margin: 0 auto; }
-        .section-title {
-            text-align: center;
-            font-size: clamp(1.8rem, 4vw, 2.5rem);
+        .section-header { text-align: center; margin-bottom: 72px; }
+        .section-eyebrow {
+            font-size: 0.8rem;
             font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            color: var(--primary-light);
             margin-bottom: 16px;
-            letter-spacing: -1px;
+        }
+        .section-title {
+            font-size: clamp(2rem, 4vw, 2.8rem);
+            font-weight: 800;
+            margin-bottom: 20px;
+            letter-spacing: -1.5px;
+            line-height: 1.15;
         }
         .section-subtitle {
-            text-align: center;
             color: var(--text-muted);
             font-size: 1.1rem;
-            max-width: 600px;
-            margin: 0 auto 60px;
+            max-width: 620px;
+            margin: 0 auto;
+            line-height: 1.7;
         }
 
         /* FEATURES */
         .features-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 20px;
+            grid-template-columns: repeat(auto-fit, minmax(310px, 1fr));
+            gap: 24px;
         }
         .feature {
-            background: var(--bg-card);
+            background: linear-gradient(180deg, var(--bg-card) 0%, rgba(22, 27, 34, 0.5) 100%);
             border: 1px solid var(--border);
-            border-radius: 12px;
-            padding: 28px;
-            transition: all 0.2s;
+            border-radius: 16px;
+            padding: 32px;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+        }
+        .feature::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(25, 118, 210, 0.5), transparent);
+            opacity: 0;
+            transition: opacity 0.3s;
         }
         .feature:hover {
-            border-color: var(--primary);
-            transform: translateY(-4px);
-            box-shadow: 0 8px 24px rgba(25, 118, 210, 0.15);
+            border-color: rgba(25, 118, 210, 0.5);
+            transform: translateY(-6px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4), 0 0 60px rgba(25, 118, 210, 0.1);
         }
-        .feature-icon {
-            font-size: 2rem;
-            margin-bottom: 16px;
-            display: block;
+        .feature:hover::before { opacity: 1; }
+        .feature-icon-wrap {
+            width: 56px;
+            height: 56px;
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.7rem;
+            margin-bottom: 20px;
+            background: linear-gradient(135deg, rgba(25, 118, 210, 0.15), rgba(167, 139, 250, 0.15));
+            border: 1px solid rgba(25, 118, 210, 0.2);
         }
         .feature h3 {
-            font-size: 1.15rem;
-            margin-bottom: 8px;
+            font-size: 1.2rem;
+            margin-bottom: 10px;
             color: var(--text);
+            font-weight: 700;
+            letter-spacing: -0.3px;
         }
-        .feature p { color: var(--text-muted); font-size: 0.95rem; line-height: 1.6; }
+        .feature p {
+            color: var(--text-muted);
+            font-size: 0.95rem;
+            line-height: 1.65;
+        }
         .feature code {
-            background: var(--bg-alt);
-            padding: 2px 6px;
-            border-radius: 4px;
+            background: rgba(25, 118, 210, 0.12);
+            padding: 2px 7px;
+            border-radius: 5px;
             font-family: var(--font-mono);
             font-size: 0.85rem;
             color: var(--accent);
         }
+        .platform-badges {
+            display: flex;
+            gap: 8px;
+            margin-top: 14px;
+            flex-wrap: wrap;
+        }
+        .platform-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: rgba(25, 118, 210, 0.12);
+            border: 1px solid rgba(25, 118, 210, 0.25);
+            padding: 5px 12px;
+            border-radius: 8px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: var(--text);
+        }
+        .platform-badge svg { width: 14px; height: 14px; }
 
-        /* CODE EXAMPLES */
+        /* EXAMPLES */
         .examples-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
@@ -268,87 +480,167 @@
         .example {
             background: var(--bg-card);
             border: 1px solid var(--border);
-            border-radius: 12px;
+            border-radius: 14px;
             overflow: hidden;
-            transition: border-color 0.2s;
+            transition: all 0.3s;
+            display: flex;
+            flex-direction: column;
         }
-        .example:hover { border-color: var(--border-strong); }
+        .example:hover {
+            border-color: var(--border-strong);
+            transform: translateY(-4px);
+            box-shadow: 0 16px 32px rgba(0, 0, 0, 0.3);
+        }
         .example-header {
             padding: 16px 20px;
-            background: var(--bg-alt);
+            background: rgba(0, 0, 0, 0.25);
             border-bottom: 1px solid var(--border);
             display: flex;
             align-items: center;
             gap: 10px;
         }
-        .example-title { font-weight: 600; font-size: 0.95rem; color: var(--text); }
-        .example-badge {
-            background: rgba(25, 118, 210, 0.15);
-            color: var(--primary-light);
-            font-size: 0.75rem;
-            padding: 2px 8px;
-            border-radius: 4px;
+        .example-title {
             font-weight: 600;
+            font-size: 0.95rem;
+            color: var(--text);
+        }
+        .example-badge {
+            margin-left: auto;
+            background: linear-gradient(135deg, rgba(25, 118, 210, 0.2), rgba(167, 139, 250, 0.2));
+            color: var(--primary-light);
+            font-size: 0.72rem;
+            padding: 3px 10px;
+            border-radius: 6px;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
         }
         .example-body {
-            padding: 20px;
+            padding: 22px;
             font-family: var(--font-mono);
-            font-size: 0.85rem;
-            line-height: 1.7;
+            font-size: 0.83rem;
+            line-height: 1.75;
             overflow-x: auto;
             color: var(--text);
+            flex: 1;
+        }
+
+        /* STATS */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 32px;
+        }
+        .stat { text-align: center; padding: 24px; }
+        .stat-number {
+            font-size: clamp(2.2rem, 5vw, 3.2rem);
+            font-weight: 800;
+            line-height: 1;
+            margin-bottom: 12px;
+            letter-spacing: -2px;
+            background: linear-gradient(135deg, var(--primary-light), var(--accent-purple));
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .stat-label {
+            color: var(--text-muted);
+            font-size: 0.92rem;
+            font-weight: 500;
         }
 
         /* INSTALL */
-        .install-block {
-            max-width: 700px;
-            margin: 0 auto;
-            text-align: center;
+        .install-block { max-width: 820px; margin: 0 auto; }
+        .os-tabs {
+            display: flex;
+            gap: 8px;
+            justify-content: center;
+            margin-bottom: 24px;
+            flex-wrap: wrap;
         }
+        .os-tab {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 20px;
+            background: var(--bg-card);
+            border: 1px solid var(--border-strong);
+            border-radius: 10px;
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: inherit;
+        }
+        .os-tab:hover { border-color: var(--border-strong); color: var(--text); }
+        .os-tab.active {
+            background: linear-gradient(135deg, rgba(25, 118, 210, 0.2), rgba(167, 139, 250, 0.2));
+            border-color: var(--primary);
+            color: var(--text);
+            box-shadow: 0 4px 16px rgba(25, 118, 210, 0.2);
+        }
+        .os-tab svg { width: 16px; height: 16px; }
+        .install-panel { display: none; }
+        .install-panel.active { display: block; }
         .install-code-wrap {
             background: var(--bg-card);
             border: 1px solid var(--border-strong);
             border-radius: 12px;
-            padding: 20px 24px;
+            padding: 18px 22px;
             display: flex;
             align-items: center;
             gap: 16px;
-            margin-bottom: 16px;
+            margin-bottom: 14px;
             position: relative;
+            transition: border-color 0.2s;
         }
+        .install-code-wrap:hover { border-color: var(--primary); }
         .install-code {
             flex: 1;
             font-family: var(--font-mono);
-            font-size: 0.95rem;
+            font-size: 0.9rem;
             color: var(--text);
             text-align: left;
+            overflow-x: auto;
         }
-        .install-code .prompt { color: var(--success); user-select: none; }
+        .install-code .prompt { color: var(--success); user-select: none; margin-right: 8px; }
         .btn-copy {
             background: var(--bg-alt);
             border: 1px solid var(--border-strong);
             color: var(--text-muted);
             padding: 8px 16px;
-            border-radius: 6px;
+            border-radius: 8px;
             cursor: pointer;
-            font-size: 0.85rem;
+            font-size: 0.82rem;
             font-family: inherit;
+            font-weight: 600;
             transition: all 0.2s;
             white-space: nowrap;
         }
-        .btn-copy:hover { background: var(--bg-card-hover); color: var(--text); }
-        .btn-copy.copied { background: var(--success); color: white; border-color: var(--success); }
-        .install-alt {
-            color: var(--text-muted);
-            font-size: 0.9rem;
-            margin-top: 24px;
+        .btn-copy:hover {
+            background: var(--bg-card-hover);
+            color: var(--text);
+            border-color: var(--text-muted);
         }
-        .install-alt code {
+        .btn-copy.copied {
+            background: var(--success);
+            color: white;
+            border-color: var(--success);
+        }
+        .install-note {
+            color: var(--text-muted);
+            font-size: 0.88rem;
+            margin-top: 28px;
+            text-align: center;
+            line-height: 1.7;
+        }
+        .install-note code {
             background: var(--bg-card);
             padding: 2px 8px;
-            border-radius: 4px;
+            border-radius: 5px;
             font-family: var(--font-mono);
-            font-size: 0.85rem;
+            font-size: 0.83rem;
             color: var(--accent);
         }
 
@@ -362,99 +654,227 @@
             display: block;
             background: var(--bg-card);
             border: 1px solid var(--border);
-            border-radius: 12px;
-            padding: 28px;
+            border-radius: 14px;
+            padding: 32px 24px;
             text-align: center;
-            transition: all 0.2s;
+            transition: all 0.3s;
             text-decoration: none;
             color: var(--text);
+            position: relative;
+            overflow: hidden;
+        }
+        .resource::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(135deg, rgba(25, 118, 210, 0.08), rgba(167, 139, 250, 0.08));
+            opacity: 0;
+            transition: opacity 0.3s;
         }
         .resource:hover {
             border-color: var(--primary);
             transform: translateY(-4px);
             text-decoration: none;
             color: var(--text);
+            box-shadow: 0 16px 32px rgba(0, 0, 0, 0.3);
         }
-        .resource-icon { font-size: 2.5rem; margin-bottom: 12px; }
-        .resource h3 { font-size: 1.1rem; margin-bottom: 6px; }
-        .resource p { font-size: 0.9rem; color: var(--text-muted); }
-
-        /* STATS */
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 24px;
-            text-align: center;
+        .resource:hover::before { opacity: 1; }
+        .resource-icon {
+            font-size: 2.4rem;
+            margin-bottom: 14px;
+            display: block;
+            position: relative;
         }
-        .stat-number {
-            font-size: clamp(2rem, 5vw, 3rem);
-            font-weight: 800;
-            color: var(--primary-light);
-            line-height: 1;
-            margin-bottom: 8px;
-            letter-spacing: -1px;
+        .resource h3 {
+            font-size: 1.05rem;
+            margin-bottom: 6px;
+            position: relative;
         }
-        .stat-label { color: var(--text-muted); font-size: 0.95rem; }
+        .resource p {
+            font-size: 0.88rem;
+            color: var(--text-muted);
+            position: relative;
+        }
 
         /* FOOTER */
         footer {
-            padding: 60px 24px 40px;
+            padding: 72px 24px 40px;
             border-top: 1px solid var(--border);
-            background: var(--bg-alt);
+            background: linear-gradient(180deg, var(--bg-alt) 0%, var(--bg) 100%);
         }
-        .footer-inner {
-            max-width: 1200px;
-            margin: 0 auto;
+        .footer-inner { max-width: 1200px; margin: 0 auto; }
+        .footer-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 40px;
-            margin-bottom: 40px;
+            grid-template-columns: 2fr 1fr 1fr 1fr;
+            gap: 48px;
+            margin-bottom: 48px;
         }
-        .footer-col h4 {
-            color: var(--text);
-            font-size: 0.95rem;
-            margin-bottom: 16px;
+        .footer-brand h3 {
+            font-size: 1.5rem;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .footer-brand p {
+            color: var(--text-muted);
+            font-size: 0.92rem;
+            line-height: 1.7;
+            max-width: 340px;
+        }
+        .footer-platforms {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 16px;
+            font-size: 0.82rem;
+            color: var(--text-muted);
+            flex-wrap: wrap;
+        }
+        .footer-platforms .label { margin-right: 4px; }
+        .footer-platforms span {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            padding: 4px 10px;
+            border-radius: 6px;
             font-weight: 600;
         }
+        .footer-platforms svg { width: 12px; height: 12px; }
+        .footer-col h4 {
+            color: var(--text);
+            font-size: 0.9rem;
+            margin-bottom: 18px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
         .footer-col ul { list-style: none; }
-        .footer-col ul li { margin-bottom: 8px; }
-        .footer-col ul a { color: var(--text-muted); font-size: 0.9rem; }
+        .footer-col ul li { margin-bottom: 12px; }
+        .footer-col ul a {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            transition: color 0.2s;
+        }
         .footer-col ul a:hover { color: var(--primary-light); }
+
+        .author-credit {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 16px;
+            padding: 28px 32px;
+            background: linear-gradient(135deg, rgba(25, 118, 210, 0.08), rgba(167, 139, 250, 0.08));
+            border: 1px solid rgba(25, 118, 210, 0.2);
+            border-radius: 16px;
+            margin-bottom: 32px;
+            text-align: center;
+            flex-wrap: wrap;
+        }
+        .author-avatar {
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--primary), var(--accent-purple));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.6rem;
+            flex-shrink: 0;
+            box-shadow: 0 4px 16px rgba(25, 118, 210, 0.3);
+        }
+        .author-info { text-align: left; }
+        .author-name {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: var(--text);
+            margin-bottom: 4px;
+            letter-spacing: -0.3px;
+        }
+        .author-title {
+            font-size: 0.88rem;
+            color: var(--primary-light);
+            font-weight: 500;
+        }
+        .author-title::before { content: '🎓 '; margin-right: 4px; }
+
         .footer-bottom {
-            max-width: 1200px;
-            margin: 0 auto;
             padding-top: 32px;
             border-top: 1px solid var(--border);
-            text-align: center;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 16px;
             color: var(--text-muted);
             font-size: 0.85rem;
         }
+        .footer-bottom .version {
+            font-family: var(--font-mono);
+            background: var(--bg-card);
+            padding: 4px 12px;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            border: 1px solid var(--border);
+        }
 
         /* RESPONSIVE */
+        @media (max-width: 900px) {
+            .footer-grid { grid-template-columns: 1fr 1fr; }
+            .footer-brand { grid-column: 1 / -1; }
+            .nav-links { display: none; }
+            nav { top: 36px; }
+        }
         @media (max-width: 768px) {
-            nav ul { display: none; }
-            .hero { padding: 60px 20px 40px; }
-            section { padding: 60px 20px; }
+            .hero { padding: 60px 20px 60px; }
+            section { padding: 70px 20px; }
             .hero-buttons { flex-direction: column; align-items: stretch; }
             .hero-buttons .btn { justify-content: center; }
-            .install-code-wrap { flex-direction: column; align-items: stretch; }
+            .install-code-wrap { flex-direction: column; align-items: stretch; gap: 12px; }
+            .btn-copy { width: 100%; }
+            .footer-grid { grid-template-columns: 1fr; gap: 32px; }
+            .author-credit { flex-direction: column; text-align: center; }
+            .author-info { text-align: center; }
+            .footer-bottom { flex-direction: column; text-align: center; }
         }
     </style>
 </head>
 <body>
 
+<!-- ⭐ NOVO — BANNER NO TOPO -->
+<div class="top-banner">
+    <a href="0.7.7.html">
+        📖 Nova documentação disponível: Icube v0.7.7 &nbsp;→
+    </a>
+</div>
+
+<!-- ANIMATED BACKGROUND -->
+<div class="bg-decoration">
+    <div class="bg-grid"></div>
+    <div class="orb orb-1"></div>
+    <div class="orb orb-2"></div>
+    <div class="orb orb-3"></div>
+</div>
+
 <!-- NAV -->
 <nav>
     <div class="nav-inner">
-        <a href="#" class="logo">🐣 Icube</a>
-        <ul>
+        <a href="#" class="logo">
+            <span class="logo-icon">🐣</span>
+            <span>Icube</span>
+        </a>
+        <ul class="nav-links">
             <li><a href="#features">Features</a></li>
             <li><a href="#exemplos">Exemplos</a></li>
+            <li><a href="0.7.7.html" class="highlight">📖 Docs</a></li>
+            <li><a href="tutorial.html" class="highlight">🎓 Tutorial</a></li>
             <li><a href="#instalacao">Instalação</a></li>
-            <li><a href="#recursos">Recursos</a></li>
         </ul>
         <a href="https://github.com/claudiop33/icube" class="btn-github" target="_blank" rel="noopener">
-            ⭐ GitHub
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+            GitHub
         </a>
     </div>
 </nav>
@@ -462,9 +882,18 @@
 <!-- HERO -->
 <section class="hero">
     <div class="hero-inner">
-        <span class="hero-tag">v0.7.7 · Decimal + Null propagation</span>
+        <div class="hero-tags">
+            <div class="hero-tag">
+                <span class="pulse"></span>
+                v0.7.7 · Decimal nativo + Null propagation
+            </div>
+            <div class="hero-tag platforms">
+                🖥️ Linux · 🪟 Windows
+            </div>
+        </div>
         <h1>
-            A linguagem com <span class="accent">banco</span> e <span class="accent">IA</span><br>
+            A linguagem com<br>
+            <span class="gradient-text">banco e IA</span><br>
             no coração.
         </h1>
         <p class="subtitle">
@@ -473,13 +902,17 @@
             <strong>IA local</strong> embutidos. Simples, segura, feita para automatizar negócios.
         </p>
         <div class="hero-buttons">
-            <a href="#instalacao" class="btn btn-primary">🚀 Começar agora</a>
-            <a href="https://github.com/claudiop33/icube" class="btn btn-secondary" target="_blank" rel="noopener">
-                📖 Ver no GitHub
+            <a href="#instalacao" class="btn btn-primary">
+                🚀 Começar agora
+            </a>
+            <a href="tutorial.html" class="btn btn-secondary">
+                🎓 Ver tutorial
+            </a>
+            <a href="0.7.7.html" class="btn btn-secondary">
+                📖 Documentação
             </a>
         </div>
 
-        <!-- Terminal -->
         <div class="terminal">
             <div class="terminal-header">
                 <span class="terminal-dot dot-red"></span>
@@ -488,20 +921,20 @@
                 <span class="terminal-title">exemplo.icb</span>
             </div>
             <div class="terminal-body">
-                <span class="t-comment">// Analisa cotações com IA</span><br>
-                <span class="t-fn">db.connect_default</span>();<br>
-                <br>
-                <span class="t-keyword">let</span> cotacoes = <span class="t-fn">db.query</span>(<br>
-                &nbsp;&nbsp;<span class="t-string">"SELECT peca, preco FROM cotacoes WHERE status = $1"</span>,<br>
-                &nbsp;&nbsp;[<span class="t-string">"pendente"</span>]<br>
-                );<br>
-                <br>
-                <span class="t-keyword">for</span> c <span class="t-keyword">in</span> cotacoes {<br>
-                &nbsp;&nbsp;<span class="t-keyword">let</span> analise = <span class="t-fn">ai.ask</span>(<br>
-                &nbsp;&nbsp;&nbsp;&nbsp;<span class="t-string">"O preço R$ "</span> + (c[<span class="t-string">"preco"</span>] <span class="t-keyword">as</span> string) + <span class="t-string">" está justo?"</span><br>
-                &nbsp;&nbsp;);<br>
-                &nbsp;&nbsp;<span class="t-fn">print</span>(c[<span class="t-string">"peca"</span>], <span class="t-string">"-&gt;"</span>, analise);<br>
-                }
+<span class="t-comment">// Analisa cotações com IA</span><br>
+<span class="t-fn">db.connect_default</span>();<br>
+<br>
+<span class="t-keyword">let</span> <span class="t-var">cotacoes</span> = <span class="t-fn">db.query</span>(<br>
+&nbsp;&nbsp;<span class="t-string">"SELECT peca, preco FROM cotacoes WHERE status = $1"</span>,<br>
+&nbsp;&nbsp;[<span class="t-string">"pendente"</span>]<br>
+);<br>
+<br>
+<span class="t-keyword">for</span> <span class="t-var">c</span> <span class="t-keyword">in</span> <span class="t-var">cotacoes</span> {<br>
+&nbsp;&nbsp;<span class="t-keyword">let</span> <span class="t-var">analise</span> = <span class="t-fn">ai.ask</span>(<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="t-string">"O preço R$ "</span> + (<span class="t-var">c</span>[<span class="t-string">"preco"</span>] <span class="t-keyword">as</span> string) + <span class="t-string">" está justo?"</span><br>
+&nbsp;&nbsp;);<br>
+&nbsp;&nbsp;<span class="t-fn">print</span>(<span class="t-var">c</span>[<span class="t-string">"peca"</span>], <span class="t-string">"-&gt;"</span>, <span class="t-var">analise</span>);<br>
+}
             </div>
         </div>
     </div>
@@ -510,39 +943,52 @@
 <!-- FEATURES -->
 <section class="alt" id="features">
     <div class="container">
-        <h2 class="section-title">Por que Icube?</h2>
-        <p class="section-subtitle">Tudo o que você precisa em uma única linguagem. Sem dependências externas, sem complexidade.</p>
+        <div class="section-header">
+            <div class="section-eyebrow">Por que Icube?</div>
+            <h2 class="section-title">Tudo em uma única linguagem</h2>
+            <p class="section-subtitle">Sem dependências externas, sem complexidade. Um único binário, todas as ferramentas.</p>
+        </div>
 
         <div class="features-grid">
             <div class="feature">
-                <span class="feature-icon">🗄️</span>
+                <div class="feature-icon-wrap">🗄️</div>
                 <h3>Banco de dados nativo</h3>
                 <p>PostgreSQL e MySQL integrados. Parâmetros seguros (<code>$1</code>, <code>$2</code>) e transações atômicas.</p>
             </div>
             <div class="feature">
-                <span class="feature-icon">💰</span>
+                <div class="feature-icon-wrap">💰</div>
                 <h3>Decimal de verdade</h3>
                 <p>Tipo <code>decimal</code> com 28 dígitos. Sem os erros de arredondamento do <code>float</code>.</p>
             </div>
             <div class="feature">
-                <span class="feature-icon">🤖</span>
+                <div class="feature-icon-wrap">🤖</div>
                 <h3>IA local integrada</h3>
-                <p>Chame <code>ai.ask()</code> direto no script. Suporte nativo a Ollama e modelos locais.</p>
+                <p>Chame <code>ai.ask()</code> direto no script. Suporte nativo a Ollama e Llama 3.</p>
             </div>
             <div class="feature">
-                <span class="feature-icon">🛡️</span>
+                <div class="feature-icon-wrap">🛡️</div>
                 <h3>Tipagem estática</h3>
                 <p>Erros detectados antes de rodar. Nulidade explícita (<code>T?</code>) e casts seguros.</p>
             </div>
             <div class="feature">
-                <span class="feature-icon">⚡</span>
+                <div class="feature-icon-wrap">⚡</div>
                 <h3>Servidor web embutido</h3>
                 <p>HTTP/HTTPS, autenticação Argon2id, sessões, TLS e rate limiting no mesmo binário.</p>
             </div>
             <div class="feature">
-                <span class="feature-icon">📦</span>
-                <h3>Zero configuração</h3>
-                <p>Um binário. <code>icube script.icb</code> e pronto. REPL interativo incluso.</p>
+                <div class="feature-icon-wrap">🖥️</div>
+                <h3>Multiplataforma</h3>
+                <p>Funciona nativamente em Linux e Windows. Um único binário, sem dependências externas.</p>
+                <div class="platform-badges">
+                    <span class="platform-badge">
+                        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z"/></svg>
+                        Linux
+                    </span>
+                    <span class="platform-badge">
+                        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M0 3.45l9.75-1.35v9.3H0V3.45m10.95-1.5L24 0v11.4H10.95V1.95M0 12.6h9.75v9.3L0 20.55V12.6m10.95 0H24V24l-13.05-1.8v-9.6z"/></svg>
+                        Windows
+                    </span>
+                </div>
             </div>
         </div>
     </div>
@@ -551,11 +997,13 @@
 <!-- EXEMPLOS -->
 <section id="exemplos">
     <div class="container">
-        <h2 class="section-title">Veja em ação</h2>
-        <p class="section-subtitle">Três exemplos reais que mostram o poder da linguagem.</p>
+        <div class="section-header">
+            <div class="section-eyebrow">Veja em ação</div>
+            <h2 class="section-title">Código que fala por si</h2>
+            <p class="section-subtitle">Três exemplos reais mostrando o poder da linguagem.</p>
+        </div>
 
         <div class="examples-grid">
-            <!-- Exemplo 1 -->
             <div class="example">
                 <div class="example-header">
                     <span class="example-title">🗄️ Consulta ao banco</span>
@@ -565,7 +1013,7 @@
 <span class="t-comment">// Relatório de vendas</span>
 <span class="t-fn">db.connect_default</span>();
 
-<span class="t-keyword">let</span> vendas = <span class="t-fn">db.query</span>(
+<span class="t-keyword">let</span> <span class="t-var">vendas</span> = <span class="t-fn">db.query</span>(
   <span class="t-string">"SELECT produto, SUM(valor) AS total
    FROM pedidos
    WHERE data >= $1
@@ -573,13 +1021,12 @@
   [<span class="t-string">"2026-01-01"</span> <span class="t-keyword">as</span> date]
 );
 
-<span class="t-keyword">for</span> v <span class="t-keyword">in</span> vendas {
-  <span class="t-fn">print</span>(v[<span class="t-string">"produto"</span>], <span class="t-string">"R$"</span>, v[<span class="t-string">"total"</span>]);
+<span class="t-keyword">for</span> <span class="t-var">v</span> <span class="t-keyword">in</span> <span class="t-var">vendas</span> {
+  <span class="t-fn">print</span>(<span class="t-var">v</span>[<span class="t-string">"produto"</span>], <span class="t-string">"R$"</span>, <span class="t-var">v</span>[<span class="t-string">"total"</span>]);
 }
                 </div>
             </div>
 
-            <!-- Exemplo 2 -->
             <div class="example">
                 <div class="example-header">
                     <span class="example-title">💰 Decimal preciso</span>
@@ -587,18 +1034,17 @@
                 </div>
                 <div class="example-body">
 <span class="t-comment">// Precisão para dinheiro</span>
-<span class="t-keyword">let</span> a: decimal = <span class="t-num">0.1</span>;
-<span class="t-keyword">let</span> b: decimal = <span class="t-num">0.2</span>;
-<span class="t-fn">print</span>(a + b);  <span class="t-comment">// 0.3 ✅</span>
+<span class="t-keyword">let</span> <span class="t-var">a</span>: decimal = <span class="t-num">0.1</span>;
+<span class="t-keyword">let</span> <span class="t-var">b</span>: decimal = <span class="t-num">0.2</span>;
+<span class="t-fn">print</span>(<span class="t-var">a</span> + <span class="t-var">b</span>);  <span class="t-comment">// 0.3 ✅</span>
 
-<span class="t-keyword">let</span> salario: decimal = <span class="t-num">5000.00</span>;
-<span class="t-keyword">let</span> bonus = salario * <span class="t-num">0.15</span>;
-<span class="t-fn">print</span>(<span class="t-string">"Bônus: R$"</span>, bonus);
-<span class="t-comment">// Bônus: R$750</span>
+<span class="t-keyword">let</span> <span class="t-var">salario</span>: decimal = <span class="t-num">5000.00</span>;
+<span class="t-keyword">let</span> <span class="t-var">bonus</span> = <span class="t-var">salario</span> * <span class="t-num">0.15</span>;
+<span class="t-fn">print</span>(<span class="t-string">"Bônus: R$"</span>, <span class="t-var">bonus</span>);
+<span class="t-comment">// Bônus: R$ 750.00</span>
                 </div>
             </div>
 
-            <!-- Exemplo 3 -->
             <div class="example">
                 <div class="example-header">
                     <span class="example-title">🤖 IA + banco</span>
@@ -606,12 +1052,12 @@
                 </div>
                 <div class="example-body">
 <span class="t-comment">// Classificação automática</span>
-<span class="t-keyword">for</span> e <span class="t-keyword">in</span> <span class="t-fn">db.query</span>(<span class="t-string">"SELECT defeito FROM equipamentos"</span>) {
-  <span class="t-keyword">let</span> urgencia = <span class="t-fn">ai.ask_with_system</span>(
+<span class="t-keyword">for</span> <span class="t-var">e</span> <span class="t-keyword">in</span> <span class="t-fn">db.query</span>(<span class="t-string">"SELECT defeito FROM equipamentos"</span>) {
+  <span class="t-keyword">let</span> <span class="t-var">urgencia</span> = <span class="t-fn">ai.ask_with_system</span>(
     <span class="t-string">"Responda: critico, alto, medio ou baixo"</span>,
-    e[<span class="t-string">"defeito"</span>]
+    <span class="t-var">e</span>[<span class="t-string">"defeito"</span>]
   );
-  <span class="t-fn">print</span>(<span class="t-string">"Urgência:"</span>, urgencia);
+  <span class="t-fn">print</span>(<span class="t-string">"Urgência:"</span>, <span class="t-var">urgencia</span>);
 }
                 </div>
             </div>
@@ -622,25 +1068,28 @@
 <!-- STATS -->
 <section class="alt">
     <div class="container">
-        <h2 class="section-title">Icube em números</h2>
-        <p class="section-subtitle">Uma linguagem madura, pronta para produção.</p>
+        <div class="section-header">
+            <div class="section-eyebrow">Em números</div>
+            <h2 class="section-title">Uma linguagem madura</h2>
+            <p class="section-subtitle">Pronta para produção, com documentação completa.</p>
+        </div>
 
         <div class="stats-grid">
-            <div>
+            <div class="stat">
                 <div class="stat-number">v0.7.7</div>
                 <div class="stat-label">Versão atual</div>
             </div>
-            <div>
+            <div class="stat">
                 <div class="stat-number">8</div>
                 <div class="stat-label">Tipos primitivos</div>
             </div>
-            <div>
+            <div class="stat">
                 <div class="stat-number">28</div>
                 <div class="stat-label">Dígitos decimais</div>
             </div>
-            <div>
-                <div class="stat-number">∞</div>
-                <div class="stat-label">Queries possíveis</div>
+            <div class="stat">
+                <div class="stat-number">2</div>
+                <div class="stat-label">Plataformas: Linux e Windows</div>
             </div>
         </div>
     </div>
@@ -649,27 +1098,59 @@
 <!-- INSTALAÇÃO -->
 <section id="instalacao">
     <div class="container">
-        <h2 class="section-title">Pronto em 30 segundos</h2>
-        <p class="section-subtitle">Clone, compile, execute.</p>
+        <div class="section-header">
+            <div class="section-eyebrow">Começar</div>
+            <h2 class="section-title">Pronto em 30 segundos</h2>
+            <p class="section-subtitle">Escolha sua plataforma e comece agora.</p>
+        </div>
 
         <div class="install-block">
-            <div class="install-code-wrap">
-                <div class="install-code">
-                    <span class="prompt">$</span> git clone https://github.com/claudiop33/icube.git && cd icube && cargo build --release
-                </div>
-                <button class="btn-copy" onclick="copyInstall(this)">📋 Copiar</button>
+            <div class="os-tabs">
+                <button class="os-tab active" onclick="switchOS('linux', this)">
+                    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z"/></svg>
+                    Linux
+                </button>
+                <button class="os-tab" onclick="switchOS('windows', this)">
+                    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M0 3.45l9.75-1.35v9.3H0V3.45m10.95-1.5L24 0v11.4H10.95V1.95M0 12.6h9.75v9.3L0 20.55V12.6m10.95 0H24V24l-13.05-1.8v-9.6z"/></svg>
+                    Windows
+                </button>
             </div>
 
-            <div class="install-code-wrap">
-                <div class="install-code">
-                    <span class="prompt">$</span> ./target/release/icube hello.icb
+            <div class="install-panel active" id="panel-linux">
+                <div class="install-code-wrap">
+                    <div class="install-code">
+                        <span class="prompt">$</span>git clone https://github.com/claudiop33/icube.git && cd icube && cargo build --release
+                    </div>
+                    <button class="btn-copy" onclick="copyInstall(this)">📋 Copiar</button>
                 </div>
-                <button class="btn-copy" onclick="copyInstall(this)">📋 Copiar</button>
+
+                <div class="install-code-wrap">
+                    <div class="install-code">
+                        <span class="prompt">$</span>./target/release/icube hello.icb
+                    </div>
+                    <button class="btn-copy" onclick="copyInstall(this)">📋 Copiar</button>
+                </div>
             </div>
 
-            <p class="install-alt">
-                Pré-requisito: <code>Rust 1.75+</code>. PostgreSQL/MySQL e Ollama opcionais.<br>
-                Consulte o <a href="https://github.com/claudiop33/icube/blob/main/DOCS.md">DOCS.md</a> para a referência completa.
+            <div class="install-panel" id="panel-windows">
+                <div class="install-code-wrap">
+                    <div class="install-code">
+                        <span class="prompt">C:\&gt;</span>git clone https://github.com/claudiop33/icube.git &amp;&amp; cd icube &amp;&amp; cargo build --release
+                    </div>
+                    <button class="btn-copy" onclick="copyInstall(this)">📋 Copiar</button>
+                </div>
+
+                <div class="install-code-wrap">
+                    <div class="install-code">
+                        <span class="prompt">C:\&gt;</span>.\target\release\icube.exe hello.icb
+                    </div>
+                    <button class="btn-copy" onclick="copyInstall(this)">📋 Copiar</button>
+                </div>
+            </div>
+
+            <p class="install-note">
+                Pré-requisito: <code>Rust 1.75+</code> em qualquer plataforma. PostgreSQL/MySQL e Ollama opcionais.<br>
+                Consulte a <a href="0.7.7.html">documentação completa</a> para a referência.
             </p>
         </div>
     </div>
@@ -678,27 +1159,30 @@
 <!-- RECURSOS -->
 <section class="alt" id="recursos">
     <div class="container">
-        <h2 class="section-title">Explore</h2>
-        <p class="section-subtitle">Tudo o que você precisa para começar.</p>
+        <div class="section-header">
+            <div class="section-eyebrow">Explore</div>
+            <h2 class="section-title">Tudo o que você precisa</h2>
+            <p class="section-subtitle">Documentação completa para todos os níveis.</p>
+        </div>
 
         <div class="resources-grid">
-            <a href="https://github.com/claudiop33/icube/blob/main/DOCS.md" class="resource" target="_blank" rel="noopener">
-                <div class="resource-icon">📖</div>
+            <a href="0.7.7.html" class="resource">
+                <span class="resource-icon">📖</span>
                 <h3>Documentação</h3>
                 <p>Referência completa da linguagem</p>
             </a>
-            <a href="https://github.com/claudiop33/icube/blob/main/TUTORIAL.md" class="resource" target="_blank" rel="noopener">
-                <div class="resource-icon">🎓</div>
+            <a href="tutorial.html" class="resource">
+                <span class="resource-icon">🎓</span>
                 <h3>Tutorial</h3>
                 <p>Aprenda do zero em 30 minutos</p>
             </a>
             <a href="https://github.com/claudiop33/icube/tree/main/examples" class="resource" target="_blank" rel="noopener">
-                <div class="resource-icon">💡</div>
+                <span class="resource-icon">💡</span>
                 <h3>Exemplos</h3>
                 <p>Scripts prontos para copiar</p>
             </a>
             <a href="https://github.com/claudiop33/icube/issues" class="resource" target="_blank" rel="noopener">
-                <div class="resource-icon">🐛</div>
+                <span class="resource-icon">🐛</span>
                 <h3>Issues</h3>
                 <p>Reporte bugs ou sugira features</p>
             </a>
@@ -709,47 +1193,67 @@
 <!-- FOOTER -->
 <footer>
     <div class="footer-inner">
-        <div class="footer-col">
-            <h4>🐣 Icube</h4>
-            <p style="color: var(--text-muted); font-size: 0.9rem;">
-                Linguagem de script com banco de dados e IA embutidos.
-            </p>
+        <div class="footer-grid">
+            <div class="footer-brand">
+                <h3><span class="logo-icon">🐣</span> Icube</h3>
+                <p>Linguagem de script com banco de dados, decimal e IA embutidos. Feita para automatizar negócios.</p>
+                <div class="footer-platforms">
+                    <span class="label">Roda em:</span>
+                    <span>
+                        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z"/></svg>
+                        Linux
+                    </span>
+                    <span>
+                        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M0 3.45l9.75-1.35v9.3H0V3.45m10.95-1.5L24 0v11.4H10.95V1.95M0 12.6h9.75v9.3L0 20.55V12.6m10.95 0H24V24l-13.05-1.8v-9.6z"/></svg>
+                        Windows
+                    </span>
+                </div>
+            </div>
+            <div class="footer-col">
+                <h4>Produto</h4>
+                <ul>
+                    <li><a href="#features">Features</a></li>
+                    <li><a href="#exemplos">Exemplos</a></li>
+                    <li><a href="#instalacao">Instalação</a></li>
+                </ul>
+            </div>
+            <div class="footer-col">
+                <h4>Recursos</h4>
+                <ul>
+                    <li><a href="0.7.7.html">Documentação</a></li>
+                    <li><a href="tutorial.html">Tutorial</a></li>
+                    <li><a href="https://github.com/claudiop33/icube/tree/main/examples" target="_blank" rel="noopener">Exemplos</a></li>
+                </ul>
+            </div>
+            <div class="footer-col">
+                <h4>Comunidade</h4>
+                <ul>
+                    <li><a href="https://github.com/claudiop33/icube" target="_blank" rel="noopener">GitHub</a></li>
+                    <li><a href="https://github.com/claudiop33/icube/issues" target="_blank" rel="noopener">Issues</a></li>
+                    <li><a href="https://github.com/claudiop33/icube/blob/main/LICENSE" target="_blank" rel="noopener">Licença MIT</a></li>
+                </ul>
+            </div>
         </div>
-        <div class="footer-col">
-            <h4>Produto</h4>
-            <ul>
-                <li><a href="#features">Features</a></li>
-                <li><a href="#exemplos">Exemplos</a></li>
-                <li><a href="#instalacao">Instalação</a></li>
-            </ul>
+
+        <div class="author-credit">
+            <div class="author-avatar">👨‍💻</div>
+            <div class="author-info">
+                <div class="author-name">Desenvolvido por Cláudio Pereira</div>
+                <div class="author-title">Bacharel em Ciências da Computação</div>
+            </div>
         </div>
-        <div class="footer-col">
-            <h4>Recursos</h4>
-            <ul>
-                <li><a href="https://github.com/claudiop33/icube/blob/main/DOCS.md" target="_blank" rel="noopener">Documentação</a></li>
-                <li><a href="https://github.com/claudiop33/icube/blob/main/TUTORIAL.md" target="_blank" rel="noopener">Tutorial</a></li>
-                <li><a href="https://github.com/claudiop33/icube/tree/main/examples" target="_blank" rel="noopener">Exemplos</a></li>
-            </ul>
+
+        <div class="footer-bottom">
+            <span>© 2026 Cláudio Pereira · Feito com 🦀 Rust</span>
+            <span class="version">v0.7.7</span>
         </div>
-        <div class="footer-col">
-            <h4>Comunidade</h4>
-            <ul>
-                <li><a href="https://github.com/claudiop33/icube" target="_blank" rel="noopener">GitHub</a></li>
-                <li><a href="https://github.com/claudiop33/icube/issues" target="_blank" rel="noopener">Issues</a></li>
-                <li><a href="https://github.com/claudiop33/icube/blob/main/LICENSE" target="_blank" rel="noopener">Licença MIT</a></li>
-            </ul>
-        </div>
-    </div>
-    <div class="footer-bottom">
-        <p>Icube v0.7.7 · Feito com 🦀 Rust · © 2026 Claudio</p>
     </div>
 </footer>
 
 <script>
 function copyInstall(btn) {
     const code = btn.previousElementSibling.textContent.trim();
-    // Remove "$ " do início
-    const textToCopy = code.replace(/^\$\s*/, '');
+    const textToCopy = code.replace(/^\$\s*/, '').replace(/^C:\\>\s*/, '');
 
     navigator.clipboard.writeText(textToCopy).then(() => {
         const original = btn.textContent;
@@ -760,6 +1264,13 @@ function copyInstall(btn) {
             btn.classList.remove('copied');
         }, 2000);
     });
+}
+
+function switchOS(os, btn) {
+    document.querySelectorAll('.os-tab').forEach(t => t.classList.remove('active'));
+    btn.classList.add('active');
+    document.querySelectorAll('.install-panel').forEach(p => p.classList.remove('active'));
+    document.getElementById('panel-' + os).classList.add('active');
 }
 </script>
 

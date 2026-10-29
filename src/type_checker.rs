@@ -19,6 +19,7 @@ pub struct TypeChecker {
     current_return: Option<Option<Type>>,
     current_fn: Option<String>,
     loop_depth: usize,
+    structs: HashMap<String, Vec<(String, Type)>>,
 }
 
 impl TypeChecker {
@@ -29,6 +30,7 @@ impl TypeChecker {
             current_return: None,
             current_fn: None,
             loop_depth: 0,
+            structs: HashMap::new(),
         }
     }
 
@@ -39,6 +41,9 @@ impl TypeChecker {
                     params: decl.params.iter().map(|p| p.ty.clone()).collect(),
                     ret: decl.ret.clone(),
                 });
+            }
+            if let Stmt::Struct(decl) = s {
+                self.structs.insert(decl.name.clone(), decl.fields.clone());
             }
         }
         self.push_scope();
@@ -59,15 +64,60 @@ impl TypeChecker {
                     ret: decl.ret.clone(),
                 });
             }
+            if let Stmt::Struct(decl) = s {
+                self.structs.insert(decl.name.clone(), decl.fields.clone());
+            }
         }
-
         self.push_scope();
         for (name, ty) in initial_vars {
             self.declare(&name, ty);
         }
-
         for s in program { self.check_stmt(s)?; }
+        self.pop_scope();
+        Ok(())
+    }
 
+    pub fn check_program_with_env_and_structs(
+        self,
+        program: &[Stmt],
+        initial_vars: Vec<(String, Type)>,
+        initial_structs: Vec<(String, Vec<(String, Type)>)>,
+    ) -> Result<(), TypeError> {
+        self.check_program_with_env_structs_fns(program, initial_vars, initial_structs, Vec::new())
+    }
+
+    pub fn check_program_with_env_structs_fns(
+        mut self,
+        program: &[Stmt],
+        initial_vars: Vec<(String, Type)>,
+        initial_structs: Vec<(String, Vec<(String, Type)>)>,
+        initial_functions: Vec<crate::parser::FnDecl>,
+    ) -> Result<(), TypeError> {
+        for (name, fields) in initial_structs {
+            self.structs.insert(name, fields);
+        }
+        for decl in initial_functions {
+            self.functions.insert(decl.name.clone(), FuncSig {
+                params: decl.params.iter().map(|p| p.ty.clone()).collect(),
+                ret: decl.ret.clone(),
+            });
+        }
+        for s in program {
+            if let Stmt::Fn(decl) = s {
+                self.functions.insert(decl.name.clone(), FuncSig {
+                    params: decl.params.iter().map(|p| p.ty.clone()).collect(),
+                    ret: decl.ret.clone(),
+                });
+            }
+            if let Stmt::Struct(decl) = s {
+                self.structs.insert(decl.name.clone(), decl.fields.clone());
+            }
+        }
+        self.push_scope();
+        for (name, ty) in initial_vars {
+            self.declare(&name, ty);
+        }
+        for s in program { self.check_stmt(s)?; }
         self.pop_scope();
         Ok(())
     }
@@ -221,6 +271,7 @@ impl TypeChecker {
             }
             Stmt::Fn(decl) => self.check_fn(decl),
             Stmt::Return(opt) => self.check_return(opt.as_ref()),
+            Stmt::Struct(_) => Ok(()),
         }
     }
 
@@ -294,12 +345,33 @@ impl TypeChecker {
             Expr::StringLit(_) => Ok(Some(Type::String)),
             Expr::NullLit => Ok(None),
             Expr::Ident(name) => {
-                let t = self.lookup(name).cloned().ok_or_else(|| {
-                    let mut msg = format!("variável '{}' não definida", name);
-                    if let Some(f) = &self.current_fn { msg = format!("em função '{}': {}", f, msg); }
-                    TypeError { msg }
-                })?;
-                Ok(Some(t))
+                // 1. variável direta
+                if let Some(t) = self.lookup(name).cloned() {
+                    return Ok(Some(t));
+                }
+                // 2. field access: "obj.field"
+                if let Some((obj, field)) = name.rsplit_once('.') {
+                    if let Some(obj_ty) = self.lookup(obj).cloned() {
+                        let base = unwrap(&obj_ty).clone();
+                        match base {
+                            Type::Struct(sname) => {
+                                let fields = self.structs.get(&sname).cloned().ok_or_else(|| {
+                                    TypeError { msg: format!("struct '{}' nao definida", sname) }
+                                })?;
+                                return match fields.iter().find(|(n, _)| n == field) {
+                                    Some((_, t)) => Ok(Some(t.clone())),
+                                    None => self.err(format!("struct '{}' nao tem campo '{}'", sname, field)),
+                                };
+                            }
+                            Type::Any => return Ok(Some(Type::Any)),
+                            _ => {}
+                        }
+                    }
+                }
+                // 3. erro
+                let mut msg = format!("variável '{}' não definida", name);
+                if let Some(f) = &self.current_fn { msg = format!("em função '{}': {}", f, msg); }
+                Err(TypeError { msg })
             }
             Expr::ArrayLit(items) => {
                 if items.is_empty() {
@@ -379,6 +451,36 @@ impl TypeChecker {
                     other => self.err(format!("não é possível indexar tipo {:?}", other)),
                 }
             }
+            Expr::StructLit { struct_name, fields } => {
+                let field_types = self.structs.get(struct_name).cloned().ok_or_else(|| {
+                    TypeError { msg: format!("struct '{}' nao definida", struct_name) }
+                })?;
+                for (fname, fexpr) in fields {
+                    let expected = match field_types.iter().find(|(n, _)| n == fname) {
+                        Some((_, t)) => t.clone(),
+                        None => return self.err(format!("struct '{}' nao tem campo '{}'", struct_name, fname)),
+                    };
+                    let t = self.infer(fexpr)?;
+                    match &t {
+                        None => {
+                            if !matches!(expected, Type::Nullable(_)) {
+                                return self.err(format!("campo '{}' nao pode ser null", fname));
+                            }
+                        }
+                        Some(actual) => {
+                            if !compatible(&expected, actual) {
+                                return self.err(format!("campo '{}': esperado {:?}, recebido {:?}", fname, expected, actual));
+                            }
+                        }
+                    }
+                }
+                for (fname, _) in &field_types {
+                    if !fields.iter().any(|(n, _)| n == fname) {
+                        return self.err(format!("campo '{}' nao informado em '{}'", fname, struct_name));
+                    }
+                }
+                Ok(Some(Type::Struct(struct_name.clone())))
+            }
         }
     }
 
@@ -397,7 +499,6 @@ impl TypeChecker {
             return Ok(Some(Type::Any));
         }
 
-        // Detecta nulabilidade antes de unwrapar (Patch 4b)
         let any_nullable = matches!(lt, Type::Nullable(_)) || matches!(rt, Type::Nullable(_));
 
         let l_inner = unwrap(&lt).clone();
@@ -519,20 +620,111 @@ impl TypeChecker {
             return Ok(Some(Type::Date));
         }
 
+        if name == "exec" || name == "exec_run" {
+            if args.len() != 1 {
+                return self.err(format!("{} espera 1 argumento (comando)", name));
+            }
+            let t = self.infer(&args[0])?;
+            if !matches!(t, Some(Type::String)) {
+                return self.err(format!("{} espera string, recebeu {:?}", name, t));
+            }
+            return if name == "exec" {
+                Ok(Some(Type::String))
+            } else {
+                Ok(Some(Type::Int))
+            };
+        }
+
+        // ====================================================================
+        // Serial (Arduino / USB)
+        // ====================================================================
+        if name == "serial.list" {
+            if !args.is_empty() {
+                return self.err("serial.list não espera argumentos");
+            }
+            return Ok(Some(Type::List(Box::new(Type::Row))));
+        }
+
+        if name == "serial.open" {
+            if args.len() != 2 {
+                return self.err("serial.open espera 2 argumentos (porta, baud)");
+            }
+            let t0 = self.infer(&args[0])?;
+            let t1 = self.infer(&args[1])?;
+            if !matches!(t0, Some(Type::String)) {
+                return self.err("serial.open: 1º argumento (porta) deve ser string");
+            }
+            if !matches!(t1, Some(Type::Int)) {
+                return self.err("serial.open: 2º argumento (baud) deve ser int");
+            }
+            return Ok(None);
+        }
+
+        if name == "serial.send" {
+            if args.len() != 1 {
+                return self.err("serial.send espera 1 argumento (mensagem)");
+            }
+            let t = self.infer(&args[0])?;
+            if !matches!(t, Some(Type::String)) {
+                return self.err("serial.send espera string");
+            }
+            return Ok(None);
+        }
+
+        if name == "serial.read" {
+            if !args.is_empty() {
+                return self.err("serial.read não espera argumentos");
+            }
+            return Ok(Some(Type::String));
+        }
+
+        if name == "serial.read_available" {
+            if !args.is_empty() {
+                return self.err("serial.read_available não espera argumentos");
+            }
+            return Ok(Some(Type::String));
+        }
+
+        if name == "serial.close" {
+            if !args.is_empty() {
+                return self.err("serial.close não espera argumentos");
+            }
+            return Ok(None);
+        }
+
         if let Some(rest) = name.strip_prefix("db.") { return self.check_db_call(rest, args); }
         if let Some(rest) = name.strip_prefix("ai.") { return self.check_ai_call(rest, args); }
 
-        let sig = self.functions.get(name).cloned().ok_or_else(|| {
+        let mut actual_name = name.to_string();
+        let mut is_method = false;
+        if !self.functions.contains_key(name) {
+            if let Some((obj_name, method_name)) = name.rsplit_once('.') {
+                if let Some(obj_ty) = self.lookup(obj_name).cloned() {
+                    if let Type::Struct(struct_name) = unwrap(&obj_ty).clone() {
+                        let full = format!("{}.{}", struct_name, method_name);
+                        if self.functions.contains_key(&full) {
+                            actual_name = full;
+                            is_method = true;
+                        }
+                    }
+                }
+            }
+        }
+
+        let sig = self.functions.get(&actual_name).cloned().ok_or_else(|| {
             let mut msg = format!("função '{}' não definida", name);
             if let Some(f) = &self.current_fn { msg = format!("em função '{}': {}", f, msg); }
             TypeError { msg }
         })?;
 
-        if args.len() != sig.params.len() {
-            return self.err(format!("função '{}' espera {} argumento(s), recebeu {}", name, sig.params.len(), args.len()));
+        let param_offset = if is_method { 1 } else { 0 };
+        let expected_count = sig.params.len() - param_offset;
+        if args.len() != expected_count {
+            return self.err(format!("função '{}' espera {} argumento(s), recebeu {}", name, expected_count, args.len()));
         }
 
-        for (i, (a, expected)) in args.iter().zip(sig.params.iter()).enumerate() {
+        for (i, a) in args.iter().enumerate() {
+            let expected = &sig.params[i + param_offset];
             let inferred = self.infer(a)?;
             match inferred {
                 None => {
@@ -658,6 +850,7 @@ fn compatible(expected: &Type, actual: &Type) -> bool {
         (Type::DateTime, Type::DateTime) => true,
         (Type::Connection, Type::Connection) => true,
         (Type::Row, Type::Row) => true,
+        (Type::Struct(a), Type::Struct(b)) => a == b,
         (Type::List(e), Type::List(a)) => compatible(e, a),
         (Type::Nullable(e), Type::Nullable(a)) => compatible(e, a),
         (Type::Nullable(e), a) => compatible(e, a),

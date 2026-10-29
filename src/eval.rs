@@ -26,6 +26,7 @@ pub enum Value {
     Null,
     Row(HashMap<String, Value>),
     List(Vec<Value>),
+    Struct(String, HashMap<String, Value>),
 }
 
 #[derive(Debug)]
@@ -473,6 +474,9 @@ pub struct Evaluator {
     ai: AiContext,
     output: Option<String>,
     deadline: Option<Instant>,
+    allow_exec: bool,  // ⭐ NOVO
+    structs: HashMap<String, Vec<(String, Type)>>,
+    serial: Option<crate::hardware::SerialDevice>,
 }
 
 impl Evaluator {
@@ -484,7 +488,52 @@ impl Evaluator {
             ai: AiContext::new(),
             output: None,
             deadline: None,
+            allow_exec: false,
+            structs: HashMap::new(),
+            serial: None,  // ⭐ NOVO
         }
+    }
+
+    /// ⭐ NOVO: Habilita/desabilita `exec()` e `exec_run()`.
+    /// CLI/REPL habilitam automaticamente. Servidor habilita só se `ICUBE_ALLOW_EXEC=1`.
+    pub fn set_allow_exec(&mut self, val: bool) {
+        self.allow_exec = val;
+    }
+
+    // ================================================================
+    // Serial (Arduino / USB)
+    // ================================================================
+    pub fn serial_open(&mut self, port_name: &str, baud: u32) -> Result<(), String> {
+        let dev = crate::hardware::SerialDevice::open(port_name, baud)?;
+        self.serial = Some(dev);
+        Ok(())
+    }
+
+    pub fn serial_send(&mut self, msg: &str) -> Result<(), String> {
+        let dev = self.serial.as_mut()
+            .ok_or_else(|| "serial nao conectado; chame serial.open() primeiro".to_string())?;
+        dev.send_line(msg)
+    }
+
+    pub fn serial_read_available(&mut self) -> Result<String, String> {
+        let dev = self.serial.as_mut()
+            .ok_or_else(|| "serial nao conectado; chame serial.open() primeiro".to_string())?;
+        dev.read_available()
+    }
+
+    pub fn serial_read_line(&mut self) -> Result<String, String> {
+        let dev = self.serial.as_mut()
+            .ok_or_else(|| "serial nao conectado; chame serial.open() primeiro".to_string())?;
+        dev.read_line()
+    }
+
+    pub fn serial_close(&mut self) -> Result<(), String> {
+        self.serial = None;
+        Ok(())
+    }
+
+    pub fn serial_is_open(&self) -> bool {
+        self.serial.is_some()
     }
 
     pub fn take_output(&mut self) -> String {
@@ -496,6 +545,7 @@ impl Evaluator {
         self.functions.clear();
         self.deadline = None;
         self.db = DbContext::new();
+        self.serial = None;
     }
 
     pub fn set_timeout(&mut self, timeout: Duration) {
@@ -516,10 +566,21 @@ impl Evaluator {
             .collect()
     }
 
+    pub fn initial_structs(&self) -> Vec<(String, Vec<(String, Type)>)> {
+        self.structs.iter().map(|(k, v)| (k.clone(), v.clone())).collect()
+    }
+
+    pub fn initial_functions(&self) -> Vec<crate::parser::FnDecl> {
+        self.functions.values().cloned().collect()
+    }
+
     pub fn run(&mut self, program: &[Stmt]) -> Result<(), EvalError> {
         for s in program {
             if let Stmt::Fn(decl) = s {
                 self.functions.insert(decl.name.clone(), decl.clone());
+            }
+            if let Stmt::Struct(decl) = s {
+                self.structs.insert(decl.name.clone(), decl.fields.clone());
             }
         }
         match self.exec_block(program)? {
@@ -561,13 +622,11 @@ impl Evaluator {
     fn exec_stmt(&mut self, stmt: &Stmt) -> Result<Flow, EvalError> {
         self.check_deadline()?;
         match stmt {
-       
-                   Stmt::Let { name, ty, value } => {
+            Stmt::Let { name, ty, value } => {
                 let mut v = self.eval_expr(value)?;
                 if let Some(expected) = ty {
                     // Cast implícito: float/int viram decimal quando o tipo
-                    // declarado é decimal. Sem isso, `let p: decimal = 1234.56;`
-                    // falharia (o literal 1234.56 é Float no parser).
+                    // declarado é decimal.
                     if matches!(expected, Type::Decimal) {
                         match &v {
                             Value::Float(f) => {
@@ -591,10 +650,6 @@ impl Evaluator {
                 self.vars.insert(name.clone(), v);
                 Ok(Flow::Normal)
             }
-       
-       
-       
-       
             Stmt::Assign { name, value } => {
                 if !self.vars.contains_key(name) {
                     return Err(EvalError(format!("variável '{}' não definida", name)));
@@ -684,6 +739,7 @@ impl Evaluator {
             }
             Stmt::Block(stmts) => self.exec_block(stmts),
             Stmt::Fn(_) => Ok(Flow::Normal),
+            Stmt::Struct(_) => Ok(Flow::Normal),
             Stmt::Return(opt) => {
                 let v = match opt {
                     Some(e) => self.eval_expr(e)?,
@@ -702,8 +758,29 @@ impl Evaluator {
             Expr::BoolLit(b) => Ok(Value::Bool(*b)),
             Expr::StringLit(s) => Ok(Value::String(s.clone())),
             Expr::NullLit => Ok(Value::Null),
-            Expr::Ident(n) => self.vars.get(n).cloned()
-                .ok_or_else(|| EvalError(format!("variável '{}' não definida", n))),
+            Expr::Ident(n) => {
+                // 1. variável direta
+                if let Some(v) = self.vars.get(n) {
+                    return Ok(v.clone());
+                }
+                // 2. field access: "obj.field"
+                if let Some((obj, field)) = n.rsplit_once('.') {
+                    if let Some(base) = self.vars.get(obj) {
+                        match base {
+                            Value::Struct(_, map) => {
+                                return map.get(field).cloned()
+                                    .ok_or_else(|| EvalError(format!("campo '{}' nao existe", field)));
+                            }
+                            Value::Row(map) => {
+                                return map.get(field).cloned()
+                                    .ok_or_else(|| EvalError(format!("coluna '{}' nao existe", field)));
+                            }
+                            _ => {}
+                        }
+                    }
+                }
+                Err(EvalError(format!("variável '{}' não definida", n)))
+            }
             Expr::ArrayLit(items) => {
                 let mut values = Vec::with_capacity(items.len());
                 for item in items { values.push(self.eval_expr(item)?); }
@@ -803,29 +880,202 @@ impl Evaluator {
                     return Ok(Value::Date(Utc::now().date_naive()));
                 }
 
+                // ⭐ NOVO: exec(cmd) — executa e captura stdout
+                if name == "exec" {
+                    if !self.allow_exec {
+                        return Err(EvalError(
+                            "exec() desabilitado. Defina ICUBE_ALLOW_EXEC=1 no ambiente.".into()
+                        ));
+                    }
+                    if args.len() != 1 {
+                        return Err(EvalError("exec espera 1 argumento (comando)".into()));
+                    }
+                    let cmd = self.eval_expr(&args[0])?;
+                    let Value::String(cmd) = cmd else {
+                        return Err(EvalError("exec espera string".into()));
+                    };
+                    let output = build_shell_command(&cmd)
+                        .output()
+                        .map_err(|e| EvalError(format!("falha ao executar '{}': {}", cmd, e)))?;
+                    if !output.status.success() {
+                        let stderr = String::from_utf8_lossy(&output.stderr).to_string();
+                        let code = output.status.code().unwrap_or(-1);
+                        return Err(EvalError(format!(
+                            "comando falhou (exit {}): {}",
+                            code, stderr.trim()
+                        )));
+                    }
+                    let stdout = String::from_utf8_lossy(&output.stdout).to_string();
+                    return Ok(Value::String(stdout.trim_end().to_string()));
+                }
+
+                // ⭐ NOVO: exec_run(cmd) — executa sem capturar, retorna exit code
+                if name == "exec_run" {
+                    if !self.allow_exec {
+                        return Err(EvalError(
+                            "exec_run() desabilitado. Defina ICUBE_ALLOW_EXEC=1 no ambiente.".into()
+                        ));
+                    }
+                    if args.len() != 1 {
+                        return Err(EvalError("exec_run espera 1 argumento (comando)".into()));
+                    }
+                    let cmd = self.eval_expr(&args[0])?;
+                    let Value::String(cmd) = cmd else {
+                        return Err(EvalError("exec_run espera string".into()));
+                    };
+                    let status = build_shell_command(&cmd)
+                        .status()
+                        .map_err(|e| EvalError(format!("falha ao executar '{}': {}", cmd, e)))?;
+                    return Ok(Value::Int(status.code().unwrap_or(-1) as i64));
+                }
+
+                // ============================================================
+                // Serial (Arduino / USB)
+                // ============================================================
+                if name == "serial.list" {
+                    if !args.is_empty() {
+                        return Err(EvalError("serial.list nao espera argumentos".into()));
+                    }
+                    let ports = crate::hardware::SerialDevice::list_ports();
+                    let list: Vec<Value> = ports.into_iter()
+                        .map(|(porta, descricao)| {
+                            let mut map = HashMap::new();
+                            map.insert("porta".to_string(), Value::String(porta));
+                            map.insert("descricao".to_string(), Value::String(descricao));
+                            Value::Row(map)
+                        })
+                        .collect();
+                    return Ok(Value::List(list));
+                }
+
+                if name == "serial.open" {
+                    if args.len() != 2 {
+                        return Err(EvalError("serial.open espera 2 argumentos (porta, baud)".into()));
+                    }
+                    let port = self.eval_expr(&args[0])?;
+                    let Value::String(port) = port else {
+                        return Err(EvalError("serial.open: 1o argumento deve ser string".into()));
+                    };
+                    let baud = self.eval_expr(&args[1])?;
+                    let Value::Int(baud) = baud else {
+                        return Err(EvalError("serial.open: 2o argumento deve ser int".into()));
+                    };
+                    self.serial_open(&port, baud as u32).map_err(EvalError)?;
+                    return Ok(Value::Null);
+                }
+
+                if name == "serial.send" {
+                    if args.len() != 1 {
+                        return Err(EvalError("serial.send espera 1 argumento".into()));
+                    }
+                    let msg = self.eval_expr(&args[0])?;
+                    let Value::String(msg) = msg else {
+                        return Err(EvalError("serial.send espera string".into()));
+                    };
+                    self.serial_send(&msg).map_err(EvalError)?;
+                    return Ok(Value::Null);
+                }
+
+                if name == "serial.read" {
+                    if !args.is_empty() {
+                        return Err(EvalError("serial.read nao espera argumentos".into()));
+                    }
+                    let line = self.serial_read_line().map_err(EvalError)?;
+                    return Ok(Value::String(line));
+                }
+
+                if name == "serial.read_available" {
+                    if !args.is_empty() {
+                        return Err(EvalError("serial.read_available nao espera argumentos".into()));
+                    }
+                    let data = self.serial_read_available().map_err(EvalError)?;
+                    return Ok(Value::String(data));
+                }
+
+                if name == "serial.close" {
+                    if !args.is_empty() {
+                        return Err(EvalError("serial.close nao espera argumentos".into()));
+                    }
+                    self.serial_close().map_err(EvalError)?;
+                    return Ok(Value::Null);
+                }
+
+                if name == "serial.is_open" {
+                    if !args.is_empty() {
+                        return Err(EvalError("serial.is_open nao espera argumentos".into()));
+                    }
+                    return Ok(Value::Bool(self.serial_is_open()));
+                }
+
                 if let Some(rest) = name.strip_prefix("db.") { return self.call_db(rest, args); }
                 if let Some(rest) = name.strip_prefix("ai.") { return self.call_ai(rest, args); }
 
-                let Some(decl) = self.functions.get(name).cloned() else {
+                // Resolve method call: obj.method -> Struct.method (prepend self)
+                let mut actual_name = name.to_string();
+                let mut self_value: Option<Value> = None;
+                if !self.functions.contains_key(name) {
+                    if let Some((obj_name, method_name)) = name.rsplit_once('.') {
+                        if let Some(obj_value) = self.vars.get(obj_name).cloned() {
+                            if let Value::Struct(struct_name, _) = &obj_value {
+                                let full = format!("{}.{}", struct_name, method_name);
+                                if self.functions.contains_key(&full) {
+                                    actual_name = full;
+                                    self_value = Some(obj_value);
+                                }
+                            }
+                        }
+                    }
+                }
+
+                let Some(decl) = self.functions.get(&actual_name).cloned() else {
                     return Err(EvalError(format!("função '{}' não definida", name)));
                 };
-                if args.len() != decl.params.len() {
+
+                let param_offset = if self_value.is_some() { 1 } else { 0 };
+                let expected_count = decl.params.len() - param_offset;
+                if args.len() != expected_count {
                     return Err(EvalError(format!(
                         "função '{}' espera {} argumento(s), recebeu {}",
-                        name, decl.params.len(), args.len()
+                        name, expected_count, args.len()
                     )));
                 }
-                let mut arg_vals = Vec::new();
-                for (i, a) in args.iter().enumerate() {
-                    let v = self.eval_expr(a)?;
-                    let p = &decl.params[i];
-                    if !type_matches(&p.ty, &v) {
+
+                let mut user_arg_vals = Vec::with_capacity(args.len());
+                for a in args {
+                    user_arg_vals.push(self.eval_expr(a)?);
+                }
+
+                let mut arg_vals: Vec<Value> = Vec::with_capacity(decl.params.len());
+                if let Some(s) = self_value {
+                    arg_vals.push(s);
+                }
+                arg_vals.extend(user_arg_vals);
+
+                // Cast implícito nos argumentos (float/int -> decimal)
+                for (i, p) in decl.params.iter().enumerate() {
+                    if i >= arg_vals.len() { break; }
+                    if matches!(p.ty, Type::Decimal) {
+                        match &arg_vals[i] {
+                            Value::Float(f) => {
+                                if let Some(d) = rust_decimal::Decimal::from_f64(*f) {
+                                    arg_vals[i] = Value::Decimal(d);
+                                }
+                            }
+                            Value::Int(n) => {
+                                arg_vals[i] = Value::Decimal(rust_decimal::Decimal::from(*n));
+                            }
+                            _ => {}
+                        }
+                    }
+                }
+
+                for (i, (v, p)) in arg_vals.iter().zip(decl.params.iter()).enumerate() {
+                    if !type_matches(&p.ty, v) {
                         return Err(EvalError(format!(
                             "argumento {} de '{}' deve ser {:?}, recebido {}",
-                            i + 1, name, p.ty, format_value(&v)
+                            i + 1, name, p.ty, format_value(v)
                         )));
                     }
-                    arg_vals.push(v);
                 }
                 let saved = std::mem::take(&mut self.vars);
                 for (p, v) in decl.params.iter().zip(arg_vals) {
@@ -852,6 +1102,32 @@ impl Evaluator {
             Expr::Cast { expr, ty } => {
                 let v = self.eval_expr(expr)?;
                 cast_value(v, ty)
+            }
+            Expr::StructLit { struct_name, fields } => {
+                let field_types = self.structs.get(struct_name).cloned().unwrap_or_default();
+                let mut map = HashMap::new();
+                for (fname, fexpr) in fields {
+                    let mut v = self.eval_expr(fexpr)?;
+                    // Cast implícito para o tipo declarado na struct
+                    if let Some((_, expected)) = field_types.iter().find(|(n, _)| n == fname) {
+                        match expected {
+                            Type::Decimal => match &v {
+                                Value::Float(f) => {
+                                    if let Some(d) = rust_decimal::Decimal::from_f64(*f) {
+                                        v = Value::Decimal(d);
+                                    }
+                                }
+                                Value::Int(i) => {
+                                    v = Value::Decimal(rust_decimal::Decimal::from(*i));
+                                }
+                                _ => {}
+                            },
+                            _ => {}
+                        }
+                    }
+                    map.insert(fname.clone(), v);
+                }
+                Ok(Value::Struct(struct_name.clone(), map))
             }
             Expr::Index { obj, index } => {
                 let o = self.eval_expr(obj)?;
@@ -1189,6 +1465,7 @@ fn as_bool(v: &Value) -> bool {
         Value::DateTime(_) => true,
         Value::Row(_) => true,
         Value::List(l) => !l.is_empty(),
+        Value::Struct(_, _) => true,
     }
 }
 
@@ -1207,6 +1484,7 @@ fn type_matches(ty: &Type, v: &Value) -> bool {
         Type::List(_) => matches!(v, Value::List(_)),
         Type::Any => true,
         Type::Nullable(inner) => matches!(v, Value::Null) || type_matches(inner, v),
+        Type::Struct(name) => matches!(v, Value::Struct(n, _) if n == name),
     }
 }
 
@@ -1223,6 +1501,7 @@ fn value_to_type(v: &Value) -> Type {
         Value::Null => Type::Nullable(Box::new(Type::Any)),
         Value::Row(_) => Type::Row,
         Value::List(_) => Type::List(Box::new(Type::Any)),
+        Value::Struct(name, _) => Type::Struct(name.clone()),
     }
 }
 
@@ -1308,10 +1587,32 @@ fn cast_value(v: Value, ty: &Type) -> Result<Value, EvalError> {
         Type::Nullable(inner) => {
             if matches!(v, Value::Null) { Ok(Value::Null) } else { cast_value(v, inner) }
         }
+        Type::Struct(name) => match &v {
+            Value::Struct(n, _) if n == name => Ok(v),
+            _ => Err(EvalError(format!("nao e possivel converter para struct '{}'", name))),
+        }
         Type::Any => Ok(v),
         Type::Connection | Type::Row | Type::List(_) => Err(EvalError(format!(
             "conversão para {:?} não é suportada", ty
         ))),
+    }
+}
+
+/// ⭐ NOVO: Constrói um Command multiplataforma para executar via shell.
+/// Linux/Mac: `sh -c "<cmd>"`
+/// Windows:   `cmd /C "<cmd>"`
+fn build_shell_command(cmd: &str) -> std::process::Command {
+    #[cfg(windows)]
+    {
+        let mut c = std::process::Command::new("cmd");
+        c.arg("/C").arg(cmd);
+        c
+    }
+    #[cfg(not(windows))]
+    {
+        let mut c = std::process::Command::new("sh");
+        c.arg("-c").arg(cmd);
+        c
     }
 }
 
@@ -1326,6 +1627,18 @@ pub fn format_value(v: &Value) -> String {
         Value::Time(t) => t.format("%H:%M:%S").to_string(),
         Value::DateTime(dt) => dt.format("%Y-%m-%d %H:%M:%S+00:00").to_string(),
         Value::Null => "null".to_string(),
+        Value::Struct(name, map) => {
+            let mut s = String::from(name.as_str());
+            s.push_str(" {");
+            let mut first = true;
+            for (k, v) in map {
+                if !first { s.push_str(", "); }
+                s.push_str(&format!("{}: {}", k, format_json_value(v)));
+                first = false;
+            }
+            s.push('}');
+            s
+        }
         Value::Row(map) => {
             let mut s = String::from("{");
             let mut first = true;
@@ -1372,7 +1685,7 @@ fn format_json_value(v: &Value) -> String {
             format!("\"{}\"", format_value(v))
         }
         Value::Decimal(_) => format_value(v),
-        Value::Row(_) | Value::List(_) => format_value(v),
+        Value::Row(_) | Value::List(_) | Value::Struct(_, _) => format_value(v),
         _ => format_value(v),
     }
 }

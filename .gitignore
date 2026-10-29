@@ -36,3 +36,20 @@ examples/*.bin
 
 # HTMLs auxiliares (temporários)
 deepseek_html_*.html
+
+# Backups locais
+*.bak
+*.bak-serial
+*.bak-*
+
+# LibreOffice
+.~lock.*#
+*.odt
+
+# Build artifacts
+obj/
+
+# Arquivos pessoais (não versionar)
+configurar apache.odt
+site/commint
+site/git

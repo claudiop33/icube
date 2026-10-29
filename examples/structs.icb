@@ -1,0 +1,30 @@
+// Structs e métodos — Icube v0.8.0
+
+struct Cliente {
+    nome: string,
+    idade: int,
+    saldo: decimal,
+}
+
+fn Cliente.maior_idade(self) -> bool {
+    return self.idade >= 18;
+}
+
+fn Cliente.aplicar_bonus(self, pct: int) -> decimal {
+    return self.saldo * (100 + pct) / 100;
+}
+
+fn Cliente.apresentar(self) {
+    print("Olá, sou", self.nome, "- saldo:", self.saldo);
+}
+
+let ana = Cliente { nome: "Ana", idade: 30, saldo: 1500.00 };
+let bob = Cliente { nome: "Bob", idade: 15, saldo: 800.00 };
+
+ana.apresentar();
+bob.apresentar();
+
+print("Ana é maior?", ana.maior_idade());
+print("Bob é maior?", bob.maior_idade());
+
+print("Saldo de Ana com bônus 10%:", ana.aplicar_bonus(10));

@@ -1,0 +1,618 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LED Control — Icube</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💡</text></svg>">
+<style>
+:root {
+  --primary: #1976d2;
+  --bg: #0a0e14;
+  --bg-card: #161b22;
+  --bg-alt: #0d1117;
+  --text: #e6edf3;
+  --text-muted: #8b949e;
+  --border: #21262d;
+  --border-strong: #30363d;
+  --success: #3fb950;
+  --danger: #f85149;
+  --warning: #d29922;
+  --mono: 'JetBrains Mono', Consolas, monospace;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  line-height: 1.55;
+}
+a { color: #42a5f5; text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+.header {
+  background: var(--bg-card);
+  border-bottom: 1px solid var(--border);
+  padding: 14px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.header-left { display: flex; align-items: center; gap: 16px; }
+.header-left a.home { color: var(--text-muted); padding: 6px 12px; border-radius: 6px; }
+.header-left a.home:hover { background: var(--bg-alt); color: var(--text); text-decoration: none; }
+.logo { font-size: 1.15rem; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+.logo .accent { color: var(--primary); }
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 14px;
+  border-radius: 16px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  background: var(--bg-alt);
+  border: 1px solid var(--border);
+}
+.status-badge .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--text-muted); }
+.status-badge.connected { color: var(--success); border-color: var(--success); }
+.status-badge.connected .dot { background: var(--success); box-shadow: 0 0 8px var(--success); }
+
+.main {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 24px;
+  display: grid;
+  grid-template-columns: 320px 1fr;
+  gap: 20px;
+}
+@media (max-width: 900px) { .main { grid-template-columns: 1fr; } }
+
+.card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 20px;
+}
+.card h2 {
+  font-size: 1rem;
+  font-weight: 700;
+  margin-bottom: 16px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--border);
+}
+
+.field { margin-bottom: 12px; }
+.field label {
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+}
+.field select, .field input[type="text"] {
+  width: 100%;
+  padding: 10px 12px;
+  background: var(--bg-alt);
+  border: 1px solid var(--border-strong);
+  border-radius: 6px;
+  color: var(--text);
+  font-size: 0.9rem;
+  font-family: inherit;
+}
+.field select:focus, .field input:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(25, 118, 210, 0.15);
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 10px 16px;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+  font-family: inherit;
+}
+.btn:hover:not(:disabled) { transform: translateY(-1px); }
+.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.btn-primary { background: var(--primary); color: white; }
+.btn-primary:hover:not(:disabled) { background: #1565c0; }
+.btn-secondary { background: var(--bg-alt); color: var(--text); border: 1px solid var(--border-strong); }
+.btn-secondary:hover:not(:disabled) { background: #1c2128; }
+.btn-danger { background: var(--danger); color: white; }
+.btn-success { background: var(--success); color: white; }
+.btn-full { width: 100%; }
+
+/* Color preview */
+.color-preview {
+  width: 100%;
+  height: 100px;
+  border-radius: 12px;
+  border: 2px solid var(--border-strong);
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--mono);
+  font-size: 0.9rem;
+  transition: background 0.3s;
+}
+
+/* Sliders */
+.slider-group { margin-bottom: 14px; }
+.slider-label {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.82rem;
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+.slider-label .value { font-family: var(--mono); color: var(--text-muted); }
+input[type="range"] {
+  width: 100%;
+  height: 8px;
+  border-radius: 4px;
+  outline: none;
+  -webkit-appearance: none;
+  appearance: none;
+}
+input[type="range"].r { background: linear-gradient(90deg, #000, #f44); }
+input[type="range"].g { background: linear-gradient(90deg, #000, #4f4); }
+input[type="range"].b { background: linear-gradient(90deg, #000, #44f); }
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: white;
+  border: 2px solid var(--primary);
+  cursor: pointer;
+}
+input[type="range"]::-moz-range-thumb {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: white;
+  border: 2px solid var(--primary);
+  cursor: pointer;
+}
+
+/* Grid de botões */
+.btn-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 10px;
+}
+
+/* Log */
+.log {
+  background: #000;
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  padding: 14px;
+  height: 300px;
+  overflow-y: auto;
+  font-family: var(--mono);
+  font-size: 0.82rem;
+  line-height: 1.6;
+}
+.log:empty::before { content: 'Log de comandos aparecerá aqui...'; color: var(--text-muted); font-style: italic; }
+.log-entry { padding: 2px 0; }
+.log-entry .time { color: var(--text-muted); margin-right: 8px; }
+.log-entry.ok .msg { color: #7ee787; }
+.log-entry.err .msg { color: #ff7b72; }
+.log-entry.cmd .msg { color: #79c0ff; }
+
+.toast {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-strong);
+  padding: 12px 18px;
+  border-radius: 8px;
+  font-size: 0.88rem;
+  box-shadow: 0 12px 32px rgba(0,0,0,0.5);
+  transform: translateX(400px);
+  transition: transform 0.3s;
+  z-index: 2000;
+}
+.toast.show { transform: translateX(0); }
+.toast.success { border-left: 3px solid var(--success); }
+.toast.error { border-left: 3px solid var(--danger); }
+</style>
+</head>
+<body>
+
+<header class="header">
+  <div class="header-left">
+    <a href="/" class="home">← Início</a>
+    <div class="logo">🐣 Icube <span class="accent">LED Control</span></div>
+  </div>
+  <span class="status-badge" id="status-badge">
+    <span class="dot"></span>
+    <span id="status-text">Desconectado</span>
+  </span>
+</header>
+
+<div class="main">
+
+  <!-- COLUNA ESQUERDA -->
+  <div>
+    <div class="card">
+      <h2>🔌 Conexão</h2>
+      <div class="field">
+        <label>Porta</label>
+        <select id="port-select">
+          <option value="">Carregando...</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Baud Rate</label>
+        <select id="baud-input">
+          <option value="9600" selected>9600</option>
+          <option value="115200">115200</option>
+        </select>
+      </div>
+      <button class="btn btn-primary btn-full" id="btn-connect" onclick="conectar()">🔗 Conectar</button>
+      <button class="btn btn-secondary btn-full" id="btn-refresh" onclick="carregarPortas()" style="margin-top:8px;">🔄 Atualizar portas</button>
+      <button class="btn btn-danger btn-full" id="btn-disconnect" onclick="desconectar()" disabled style="margin-top:8px;">⏹️ Desconectar</button>
+    </div>
+
+    <div class="card">
+      <h2>⚙️ Modos</h2>
+      <div class="btn-grid">
+        <button class="btn btn-secondary" onclick="comando('led_normal()', 'NORMAL')" disabled class="led-btn">🎛️ Normal</button>
+        <button class="btn btn-secondary" onclick="comando('led_stop()', 'STOP')" disabled>⏹️ Parar</button>
+        <button class="btn btn-secondary" onclick="comando('led_reset()', 'RESET')" disabled>🔄 Reset</button>
+        <button class="btn btn-secondary" onclick="comando('print(led_status())', 'STATUS')" disabled>📊 Status</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>🌈 Geradores</h2>
+      <div class="btn-grid">
+        <button class="btn btn-success" onclick="gerar('rainbow')" disabled>🌈 Arco-íris</button>
+        <button class="btn btn-success" onclick="gerar('blink')" disabled>✨ Pisca</button>
+        <button class="btn btn-success" onclick="gerar('fade')" disabled>🎨 Fade</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>▶️ Execução</h2>
+      <div class="btn-grid">
+        <button class="btn btn-primary" onclick="comando('led_seq_exec()', 'EXEC')" disabled>▶️ Executar</button>
+        <button class="btn btn-primary" onclick="comando('led_seq_loop()', 'LOOP')" disabled>🔁 Loop</button>
+        <button class="btn btn-danger" onclick="comando('led_seq_stop()', 'SEQ_STOP')" disabled>⏹️ Parar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- COLUNA DIREITA -->
+  <div>
+    <div class="card">
+      <h2>🎨 Cor Manual</h2>
+      <div class="color-preview" id="color-preview" style="background:#000;color:#fff;">
+        RGB(0, 0, 0)
+      </div>
+
+      <div class="slider-group">
+        <div class="slider-label"><span>🔴 R</span><span class="value" id="val-r">0</span></div>
+        <input type="range" class="r" id="slider-r" min="0" max="255" value="0"
+               oninput="atualizarCor()">
+      </div>
+      <div class="slider-group">
+        <div class="slider-label"><span>🟢 G</span><span class="value" id="val-g">0</span></div>
+        <input type="range" class="g" id="slider-g" min="0" max="255" value="0"
+               oninput="atualizarCor()">
+      </div>
+      <div class="slider-group">
+        <div class="slider-label"><span>🔵 B</span><span class="value" id="val-b">0</span></div>
+        <input type="range" class="b" id="slider-b" min="0" max="255" value="0"
+               oninput="atualizarCor()">
+      </div>
+
+      <button class="btn btn-primary btn-full" onclick="aplicarCor()" disabled id="btn-apply">
+        💡 Aplicar cor no LED
+      </button>
+    </div>
+
+    <div class="card">
+      <h2>📋 Log</h2>
+      <div class="log" id="log"></div>
+    </div>
+  </div>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+let connected = false;
+let ledLibraryLoaded = false;
+
+// ============================================================
+// API — chama /execute mantendo sessão
+// ============================================================
+async function exec(code) {
+  // Auto-inserir ; se o codigo nao terminar em ; { }
+  const trimmed = code.trim();
+  if (trimmed && !trimmed.endsWith(';') && !trimmed.endsWith('{') && !trimmed.endsWith('}')) {
+    code = code + ';';
+  }
+
+  const r = await fetch('/execute', {
+    method: 'POST',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ code })
+  });
+  if (r.status === 401) { location.href = '/'; throw new Error('Não autenticado'); }
+  const d = await r.json();
+  if (!d.ok) throw new Error(d.error || 'Erro');
+  return d.output;
+}
+
+// ============================================================
+// CARREGAR BIBLIOTECA LED (uma vez)
+// ============================================================
+async function carregarBiblioteca() {
+  if (ledLibraryLoaded) return;
+  try {
+    log('Carregando biblioteca LED...', 'cmd');
+
+    // Define todas as funcoes inline (nao depende de arquivo externo)
+    await exec(`
+      fn led_connect(porta: string, baud: int) { serial.open(porta, baud); }
+      fn led_disconnect() { serial.close(); }
+      fn led_set(r: int, g: int, b: int) {
+        if r < 0 { r = 0; } if r > 255 { r = 255; }
+        if g < 0 { g = 0; } if g > 255 { g = 255; }
+        if b < 0 { b = 0; } if b > 255 { b = 255; }
+        serial.send("LED " + (r as string) + "." + (g as string) + "." + (b as string));
+      }
+      fn led_normal() { serial.send("NOR"); }
+      fn led_stop() { serial.send("STOP"); }
+      fn led_reset() { serial.send("RESET"); }
+      fn led_status() -> string { serial.send("STATUS"); return serial.read(); }
+      fn led_seq_start() { serial.send("SEQ_START"); }
+      fn led_seq_add(r: int, g: int, b: int, d: int) {
+        serial.send("SEQ_ADD " + (r as string) + " " + (g as string) + " " + (b as string) + " " + (d as string));
+      }
+      fn led_seq_end() { serial.send("SEQ_END"); }
+      fn led_seq_exec() { serial.send("SEQ_EXEC"); }
+      fn led_seq_loop() { serial.send("SEQ_LOOP"); }
+      fn led_seq_stop() { serial.send("SEQ_STOP"); }
+      fn led_seq_clear() { serial.send("SEQ_CLEAR"); }
+      fn led_gen_rainbow(steps: int, delay: int) {
+        led_seq_clear(); led_seq_start();
+        let i = 0;
+        while i < steps {
+          let hue = (i as float) / (steps as float);
+          let r = 0; let g = 0; let b = 0;
+          if hue < 0.333 { r = 255; g = (255.0 * (hue * 3.0)) as int; b = 0; }
+          else if hue < 0.667 { r = (255.0 * (1.0 - (hue - 0.333) * 3.0)) as int; g = 255; b = 0; }
+          else { r = 0; g = (255.0 * (1.0 - (hue - 0.667) * 3.0)) as int; b = 255; }
+          led_seq_add(r, g, b, delay);
+          i = i + 1;
+        }
+        led_seq_end();
+      }
+      fn led_gen_blink(times: int, delay: int) {
+        led_seq_clear(); led_seq_start();
+        let i = 0;
+        while i < times {
+          led_seq_add(255, 255, 255, delay);
+          led_seq_add(0, 0, 0, delay);
+          i = i + 1;
+        }
+        led_seq_end();
+      }
+      fn led_gen_fade(steps: int, delay: int) {
+        led_seq_clear(); led_seq_start();
+        let step_size = 255 / steps; if step_size < 1 { step_size = 1; }
+        let i = 0;
+        while i <= 255 { led_seq_add(i, 0, 0, delay); i = i + step_size; }
+        i = 255;
+        while i >= 0 { led_seq_add(i, 0, 0, delay); i = i - step_size; }
+        led_seq_end();
+      }
+      print("Biblioteca LED carregada");
+    `);
+
+    ledLibraryLoaded = true;
+    log('Biblioteca LED carregada', 'ok');
+    habilitarBotoes(true);
+  } catch (e) {
+    log('Erro ao carregar biblioteca: ' + e.message, 'err');
+    showToast('Erro: ' + e.message, 'error');
+  }
+}
+
+// ============================================================
+// PORTAS
+// ============================================================
+async function carregarPortas() {
+  const sel = document.getElementById('port-select');
+  sel.innerHTML = '<option value="">Carregando...</option>';
+  try {
+    const d = await fetch('/api/serial/ports', { credentials: 'include' }).then(r => r.json());
+    if (d.ok && d.ports.length > 0) {
+      sel.innerHTML = d.ports.map(p =>
+        `<option value="${p.porta}">${p.porta} — ${p.descricao}</option>`
+      ).join('');
+    } else {
+      sel.innerHTML = '<option value="">Nenhuma porta</option>';
+    }
+  } catch (e) {
+    sel.innerHTML = '<option value="">Erro ao listar</option>';
+  }
+}
+
+// ============================================================
+// CONECTAR / DESCONECTAR
+// ============================================================
+async function conectar() {
+  const porta = document.getElementById('port-select').value;
+  const baud = parseInt(document.getElementById('baud-input').value);
+  if (!porta) { showToast('Selecione uma porta', 'error'); return; }
+
+  document.getElementById('btn-connect').disabled = true;
+  document.getElementById('btn-connect').textContent = '⏳ Conectando...';
+
+  try {
+    await carregarBiblioteca();
+    await exec(`led_connect("${porta}", ${baud});`);
+
+    connected = true;
+    document.getElementById('status-badge').className = 'status-badge connected';
+    document.getElementById('status-text').textContent = 'Conectado em ' + porta;
+    document.getElementById('btn-connect').disabled = true;
+    document.getElementById('btn-disconnect').disabled = false;
+    habilitarBotoes(true);
+    log('Conectado em ' + porta + ' @ ' + baud, 'ok');
+    showToast('Conectado!', 'success');
+  } catch (e) {
+    document.getElementById('btn-connect').disabled = false;
+    document.getElementById('btn-connect').textContent = '🔗 Conectar';
+    log('Erro: ' + e.message, 'err');
+    showToast('Erro: ' + e.message, 'error');
+  }
+}
+
+async function desconectar() {
+  try {
+    await exec('led_disconnect();');
+  } catch (e) { /* ignora */ }
+
+  connected = false;
+  document.getElementById('status-badge').className = 'status-badge';
+  document.getElementById('status-text').textContent = 'Desconectado';
+  document.getElementById('btn-connect').disabled = false;
+  document.getElementById('btn-connect').textContent = '🔗 Conectar';
+  document.getElementById('btn-disconnect').disabled = true;
+  habilitarBotoes(false);
+  log('Desconectado', 'cmd');
+}
+
+// ============================================================
+// COMANDOS
+// ============================================================
+async function comando(codigo, label) {
+  log('→ ' + label, 'cmd');
+  try {
+    const out = await exec(codigo);
+    if (out && out.trim()) log('← ' + out.trim(), 'ok');
+    else log('✓ ' + label, 'ok');
+  } catch (e) {
+    log('✗ ' + e.message, 'err');
+    showToast(e.message, 'error');
+  }
+}
+
+async function gerar(tipo) {
+  let codigo = '';
+  if (tipo === 'rainbow') codigo = 'led_gen_rainbow(30, 100);';
+  else if (tipo === 'blink') codigo = 'led_gen_blink(10, 200);';
+  else if (tipo === 'fade') codigo = 'led_gen_fade(17, 50);';
+
+  log('→ Gerar ' + tipo, 'cmd');
+  try {
+    await exec(codigo);
+    log('✓ Sequência ' + tipo + ' gerada', 'ok');
+    showToast('Sequência gerada', 'success');
+  } catch (e) {
+    log('✗ ' + e.message, 'err');
+  }
+}
+
+// ============================================================
+// COR MANUAL
+// ============================================================
+function atualizarCor() {
+  const r = parseInt(document.getElementById('slider-r').value);
+  const g = parseInt(document.getElementById('slider-g').value);
+  const b = parseInt(document.getElementById('slider-b').value);
+
+  document.getElementById('val-r').textContent = r;
+  document.getElementById('val-g').textContent = g;
+  document.getElementById('val-b').textContent = b;
+
+  const preview = document.getElementById('color-preview');
+  preview.style.background = `rgb(${r}, ${g}, ${b})`;
+  preview.textContent = `RGB(${r}, ${g}, ${b})`;
+
+  // Contraste do texto
+  const lum = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+  preview.style.color = lum > 0.5 ? '#000' : '#fff';
+}
+
+async function aplicarCor() {
+  const r = parseInt(document.getElementById('slider-r').value);
+  const g = parseInt(document.getElementById('slider-g').value);
+  const b = parseInt(document.getElementById('slider-b').value);
+
+  log(`→ LED(${r},${g},${b})`, 'cmd');
+  try {
+    await exec(`led_set(${r}, ${g}, ${b});`);
+    log(`✓ LED atualizado`, 'ok');
+  } catch (e) {
+    log('✗ ' + e.message, 'err');
+  }
+}
+
+// ============================================================
+// HELPERS
+// ============================================================
+function habilitarBotoes(enable) {
+  document.querySelectorAll('.btn-grid button, #btn-apply').forEach(b => {
+    if (b.id === 'btn-connect' || b.id === 'btn-disconnect' || b.id === 'btn-refresh') return;
+    b.disabled = !enable;
+  });
+}
+
+function log(msg, type = 'cmd') {
+  const log = document.getElementById('log');
+  const time = new Date().toLocaleTimeString('pt-BR');
+  const entry = document.createElement('div');
+  entry.className = 'log-entry ' + type;
+  entry.innerHTML = `<span class="time">${time}</span><span class="msg">${escapeHtml(msg)}</span>`;
+  log.appendChild(entry);
+  log.scrollTop = log.scrollHeight;
+  while (log.children.length > 500) log.removeChild(log.firstChild);
+}
+
+function escapeHtml(s) {
+  return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+function showToast(msg, type = 'info') {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = 'toast ' + type + ' show';
+  clearTimeout(el._t);
+  el._t = setTimeout(() => el.classList.remove('show'), 3000);
+}
+
+// ============================================================
+// INIT
+// ============================================================
+carregarPortas();
+atualizarCor();
+</script>
+
+</body>
+</html>
